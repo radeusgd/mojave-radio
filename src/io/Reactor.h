@@ -5,6 +5,7 @@
 #ifndef MOJAVE_RADIO_REACTOR_H
 #define MOJAVE_RADIO_REACTOR_H
 
+#include <iostream>
 #include <utility>
 #include <vector>
 #include <functional>
@@ -48,22 +49,24 @@ private:
     }
 
 public:
+    Reactor(const Reactor&) = delete;
+    Reactor() = default;
 
     void setOnReadable(int fd, std::function<void()> readable) {
-        events[fd].out = std::move(readable);
+        events[fd].in = std::move(readable);
     }
 
     void setOnWriteable(int fd, std::function<void()> writeable) {
-        events[fd].in = std::move(writeable);
+        events[fd].out = std::move(writeable);
     }
 
     void cancelReading(int fd) {
-        events[fd].out = nullptr;
+        events[fd].in = nullptr;
         cleanIfEmpty(fd);
     }
 
     void cancelWriting(int fd) {
-        events[fd].in = nullptr;
+        events[fd].out = nullptr;
         cleanIfEmpty(fd);
     }
 

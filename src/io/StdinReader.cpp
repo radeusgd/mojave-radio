@@ -4,6 +4,7 @@
 
 #include "StdinReader.h"
 #include <unistd.h>
+#include <errors.h>
 
 static constexpr size_t BUFSIZE = 1024;
 
@@ -16,7 +17,7 @@ void read_from_stdin(Reactor &reactor,
         buffer.resize(BUFSIZE);
         ssize_t r = read(0, &buffer[0], BUFSIZE);
         if (r < 0) {
-            // TODO error
+            raise_errno("stdin read");
             return;
         }
 

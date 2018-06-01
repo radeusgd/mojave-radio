@@ -9,6 +9,7 @@ namespace po = boost::program_options;
 int main(int argc, const char *argv[]) {
     po::options_description desc("Usage");
     std::string MCAST_ADDR_STR;
+    IpAddr MCAST_ADDR;
     uint16_t DATA_PORT;
     uint16_t CTRL_PORT;
     int PSIZE, FSIZE, RTIME;
@@ -21,15 +22,13 @@ int main(int argc, const char *argv[]) {
         (",f", po::value<int>(&FSIZE)->default_value(128 * 1024), "FSIZE")
         (",R", po::value<int>(&RTIME)->default_value(250), "RTIME")
         (",n", po::value<std::string>(&NAZWA)->default_value("Nienazwany nadajnik"), "NAZWA");
-    
-    po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc), vm);
-    po::notify(vm);
 
-    IpAddr MCAST_ADDR;
     try {
+        po::variables_map vm;
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
         MCAST_ADDR = ipaddr_from_string(MCAST_ADDR_STR);
-    } catch (std::runtime_error& e) {
+    } catch (std::exception &e) { // common ancestor for boost::program_options::invalid_option_value and std::runtime_error
         std::cerr << e.what() << "\n" << desc;
         return 1;
     }

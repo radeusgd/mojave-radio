@@ -14,10 +14,10 @@ private:
         return std::vector<char>(str.begin(), str.end());
     }
 public:
-    TextMulticastSocket(Reactor& reactor, IpAddr multicast_address)
+    TextMulticastSocket(Reactor& reactor, SockAddr multicast_address)
         : MulticastSocket(reactor, multicast_address) {}
 
-    void send(IpAddr destination, const std::string& message) {
+    void send(SockAddr destination, const std::string& message) {
         MulticastSocket::send(destination, strToData(message));
     }
 
@@ -25,9 +25,9 @@ public:
         MulticastSocket::broadcast(strToData(message));
     }
 
-    virtual void onReceived(IpAddr sender, const std::string& message) = 0;
+    virtual void onReceived(SockAddr sender, const std::string& message) = 0;
 
-    void onReceived(IpAddr sender, const BytesBuffer& data) override {
+    void onReceived(SockAddr sender, const BytesBuffer& data) override {
         if (data.empty() || data.back() != '\n') {
             // TODO malformed data
             return;

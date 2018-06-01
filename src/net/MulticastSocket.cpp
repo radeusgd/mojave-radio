@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include "errors.h"
 
-MulticastSocket::MulticastSocket(Reactor &reactor, IpAddr multicast_address)
+MulticastSocket::MulticastSocket(Reactor &reactor, SockAddr multicast_address)
     : reactor(reactor),
       multicast_address(multicast_address) {
     // initialize socket
@@ -54,7 +54,7 @@ MulticastSocket::MulticastSocket(Reactor &reactor, IpAddr multicast_address)
     reactor.setOnReadable(sock, [&reactor, this]() {
         std::vector<char> buffer;
         buffer.resize(BUFSIZE);
-        IpAddr src_addr;
+        SockAddr src_addr;
         socklen_t len = sizeof(src_addr);
         ssize_t r = recvfrom(sock, &buffer[0], BUFSIZE, MSG_DONTWAIT,
                              reinterpret_cast<sockaddr *>(&src_addr), &len);
@@ -99,7 +99,7 @@ void MulticastSocket::registerWriter() {
     });
 }
 
-void MulticastSocket::send(IpAddr destination, const BytesBuffer &data) {
+void MulticastSocket::send(SockAddr destination, const BytesBuffer &data) {
     send_queue.emplace_back(destination, data);
     if (send_queue.size() == 1) {
         // we are enqueuing the first packet, register the handler
@@ -107,7 +107,7 @@ void MulticastSocket::send(IpAddr destination, const BytesBuffer &data) {
     }
 }
 
-void MulticastSocket::send(IpAddr destination, BytesBuffer &&data) {
+void MulticastSocket::send(SockAddr destination, BytesBuffer &&data) {
     send_queue.emplace_back(destination, std::move(data));
     if (send_queue.size() == 1) {
         // we are enqueuing the first packet, register the handler

@@ -8,10 +8,13 @@
 #include <netinet/ip.h>
 #include <string>
 
-using IpAddr = struct sockaddr_in;
+using SockAddr = struct sockaddr_in;
+using IpAddr = struct in_addr;
 
 constexpr int DEFAULT_TTL = 4;
 
 IpAddr ipaddr_from_string(std::string str);
+
+SockAddr make_sockaddr(IpAddr ip, uint16_t port);
 
 #endif //MOJAVE_RADIO_NET_H

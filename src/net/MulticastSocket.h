@@ -18,11 +18,11 @@ static constexpr size_t BUFSIZE = 1024;
  */
 class MulticastSocket {
     int sock;
-    IpAddr multicast_address;
+    SockAddr multicast_address;
     struct PendingMessage {
-        IpAddr destination;
+        SockAddr destination;
         BytesBuffer data;
-        PendingMessage(IpAddr destination, BytesBuffer data)
+        PendingMessage(SockAddr destination, BytesBuffer data)
             : destination(destination), data(std::move(data)) {}
     };
     std::deque<PendingMessage> send_queue;
@@ -31,15 +31,15 @@ class MulticastSocket {
 
     void registerWriter();
 public:
-    MulticastSocket(Reactor& reactor, IpAddr multicast_address);
+    MulticastSocket(Reactor& reactor, SockAddr multicast_address);
 
-    void send(IpAddr destination, const BytesBuffer& data);
-    void send(IpAddr destination, BytesBuffer&& data);
+    void send(SockAddr destination, const BytesBuffer& data);
+    void send(SockAddr destination, BytesBuffer&& data);
 
     void broadcast(const BytesBuffer& data);
     void broadcast(BytesBuffer&& data);
 
-    virtual void onReceived(IpAddr sender, const BytesBuffer& data) = 0;
+    virtual void onReceived(SockAddr sender, const BytesBuffer& data) = 0;
 };
 
 

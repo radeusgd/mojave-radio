@@ -6,9 +6,9 @@
 
 class EchoSocket : public TextMulticastSocket {
 public:
-    EchoSocket(Reactor &reactor, const IpAddr &multicast_address)
+    EchoSocket(Reactor &reactor, const SockAddr &multicast_address)
         : TextMulticastSocket(reactor, multicast_address) {}
-    void onReceived(IpAddr sender, const std::string& message) override {
+    void onReceived(SockAddr sender, const std::string& message) override {
         std::cout << message << "\n"; // TODO IP
         // TODO use stdoutwriter
     }
@@ -16,9 +16,9 @@ public:
 
 int main() {
     Reactor reactor;
-    std::string ipstr = "239.10.11.12:40000";
+    std::string ipstr = "239.10.11.12";
 
-    EchoSocket socket(reactor, ipaddr_from_string(ipstr));
+    EchoSocket socket(reactor, make_sockaddr(ipaddr_from_string(ipstr), 40000));
 
     reactor.runEvery(5000, [&reactor](){
         std::cout<<"Hi\n";

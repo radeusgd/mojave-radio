@@ -5,8 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(src)
 
-add_executable(Mojave_Radio
-        src/main.cpp
+set(SOURCES
         src/io/Reactor.cpp
         src/io/Reactor.h
         src/chrono.h
@@ -17,4 +16,26 @@ add_executable(Mojave_Radio
         src/net/net.h src/net/TcpServer.cpp
         src/net/TcpServer.h
         src/net/MulticastSocket.cpp
-        src/net/MulticastSocket.h src/errors.h src/errors.cpp src/net/TextMulticastSocket.cpp src/net/TextMulticastSocket.h src/net/net.cpp)
+        src/net/MulticastSocket.h
+        src/errors.h
+        src/errors.cpp
+        src/net/TextMulticastSocket.cpp
+        src/net/TextMulticastSocket.h
+        src/net/net.cpp src/constants.h)
+
+add_executable(Playground
+        src/main.cpp
+        ${SOURCES})
+
+add_executable(odbiornik
+        ${SOURCES} src/odbiornik_main.cpp)
+
+add_executable(nadajnik
+        ${SOURCES} src/nadajnik_main.cpp)
+
+set(LIBRARIES
+        boost_program_options)
+
+TARGET_LINK_LIBRARIES(Playground LINK_PUBLIC ${LIBRARIES})
+TARGET_LINK_LIBRARIES(odbiornik LINK_PUBLIC ${LIBRARIES})
+TARGET_LINK_LIBRARIES(nadajnik LINK_PUBLIC ${LIBRARIES})

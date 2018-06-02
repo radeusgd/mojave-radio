@@ -57,7 +57,9 @@ void Transmitter::prepareStdin() {
     reactor.setOnReadable(0, [this]() {
         assert(in_buffer < psize);
         size_t to_read = psize - in_buffer;
+        //dbg << "Want to read " << to_read << std::endl;
         ssize_t r = read(0, &stdin_buff[0] + in_buffer, to_read);
+        //dbg << "Did read " << r << std::endl;
 
         if (r < 0) {
             raise_errno("stdin read");

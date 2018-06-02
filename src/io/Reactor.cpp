@@ -5,6 +5,7 @@
 #include "Reactor.h"
 
 #include <poll.h>
+#include <utils/logging.h>
 #include "utils/functional.h"
 
 void Reactor::cleanIfEmpty(int fd) {
@@ -82,7 +83,14 @@ void Reactor::run() {
                 events[pfd.fd].out();
             }
             if (pfd.revents & POLLERR) {
-                // TODO ?
+                dbg << "Some error happened on " << pfd.fd << "\n";
+            }
+            if (pfd.revents & POLLNVAL) {
+                dbg << "Invalid request on " << pfd.fd << "!\n";
+            }
+            if (pfd.revents & POLLHUP) { // for example a pipe, doesn't call itself ready to read on EOF but calls this
+                if (events[pfd.fd].in)
+                    events[pfd.fd].in();
             }
         }
     }

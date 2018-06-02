@@ -40,6 +40,8 @@ int main(int argc, const char *argv[]) {
     dbg << "MCAST_ADDR = " << MCAST_ADDR << "\n";
     dbg << "NAME = " << NAZWA << "\n";
     dbg << "CTRL_PORT = " << CTRL_PORT << "\n";
+    dbg << "DATA_PORT = " << DATA_PORT << "\n";
+    dbg << "PSIZE = " << PSIZE << "\n";
 
     {
         Reactor reactor;

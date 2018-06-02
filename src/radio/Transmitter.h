@@ -21,8 +21,23 @@ private:
     MulticastSocket data_sock;
 
     std::string LOOKUP_REPLY;
+    // initializers
+    void prepareControl();
+    void prepareStdin();
+    void prepareRetransmissions(int rtime);
 
     void sendReply(SockAddr destination);
+
+    BytesBuffer stdin_buff;
+    size_t in_buffer = 0;
+
+    size_t psize;
+    uint64_t first_byte_num = 0;
+    uint64_t session_id;
+
+    void processPackage(BytesBuffer&& data);
+
+    std::set<int> rexmit_requests; // TODO
 
 public:
     Transmitter(Reactor& reactor,

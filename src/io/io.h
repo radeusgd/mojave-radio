@@ -6,6 +6,7 @@
 #define MOJAVE_RADIO_IO_H
 
 #include <vector>
+#include <cstddef>
 
 using BytesBuffer = std::vector<char>;
 

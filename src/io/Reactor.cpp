@@ -5,7 +5,7 @@
 #include "Reactor.h"
 
 #include <poll.h>
-#include "functional.h"
+#include "utils/functional.h"
 
 void Reactor::cleanIfEmpty(int fd) {
     auto wf = events.find(fd);
@@ -60,6 +60,11 @@ void Reactor::run() {
                 pfd.events |= POLLOUT;
             }
             polls.push_back(pfd);
+        }
+
+        if (polls.empty()) {
+            // TODO waiting for timers?
+            return;
         }
 
         int r = poll(&polls[0], polls.size(), timeout());

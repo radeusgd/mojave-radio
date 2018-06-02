@@ -12,34 +12,46 @@
 
 static constexpr size_t BUFSIZE = 1024;
 
+enum class MulticastMode {
+    REGISTER_TO_MULTICAST_GROUP, // this mode registers to the multicast group and listens for messages sent there
+    MULTICAST_SEND_ONLY // this mode listens on a normal port and is just allowed to send messages to the multicast address
+};
+
 /*
  * A server that can receive and send packets to/from a multicast address
  * or reply to just one of the senders.
  */
 class MulticastSocket {
+public:
+    using OnReceive = std::function<void(SockAddr, const BytesBuffer&)>;
+private:
     int sock;
     SockAddr multicast_address;
     struct PendingMessage {
         SockAddr destination;
         BytesBuffer data;
-        PendingMessage(SockAddr destination, BytesBuffer data)
-            : destination(destination), data(std::move(data)) {}
+        std::function<void()> callback;
+        PendingMessage(SockAddr destination, BytesBuffer data, std::function<void()> callback)
+            : destination(destination), data(std::move(data)), callback(std::move(callback)) {}
     };
     std::deque<PendingMessage> send_queue;
 
     Reactor& reactor;
+    OnReceive receive_hook;
 
     void registerWriter();
 public:
-    MulticastSocket(Reactor& reactor, SockAddr multicast_address);
+    MulticastSocket(Reactor& reactor, SockAddr multicast_address, MulticastMode mode);
 
-    void send(SockAddr destination, const BytesBuffer& data);
-    void send(SockAddr destination, BytesBuffer&& data);
+    void send(SockAddr destination, const BytesBuffer& data, std::function<void()> callback = nullptr);
+    void send(SockAddr destination, BytesBuffer&& data, std::function<void()> callback = nullptr);
 
-    void broadcast(const BytesBuffer& data);
-    void broadcast(BytesBuffer&& data);
+    void broadcast(const BytesBuffer& data, std::function<void()> callback = nullptr);
+    void broadcast(BytesBuffer&& data, std::function<void()> callback = nullptr);
 
-    virtual void onReceived(SockAddr sender, const BytesBuffer& data) = 0;
+    void setOnReceived(OnReceive hook);
+
+    ~MulticastSocket();
 };
 
 

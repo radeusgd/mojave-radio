@@ -5,11 +5,13 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(src)
 
+add_definitions(-DDEBUG)
+
 set(SOURCES
         src/io/Reactor.cpp
         src/io/Reactor.h
-        src/chrono.h
-        src/functional.h
+        src/utils/chrono.h
+        src/utils/functional.h
         src/io/StdinReader.cpp
         src/io/StdinReader.h
         src/io/io.h
@@ -17,21 +19,21 @@ set(SOURCES
         src/net/TcpServer.h
         src/net/MulticastSocket.cpp
         src/net/MulticastSocket.h
-        src/errors.h
-        src/errors.cpp
+        src/utils/errors.h
+        src/utils/errors.cpp
         src/net/TextMulticastSocket.cpp
         src/net/TextMulticastSocket.h
-        src/net/net.cpp src/constants.h)
+        src/net/net.cpp src/utils/constants.h src/utils/FIFOBuffer.cpp src/utils/FIFOBuffer.h src/radio/protocol.h src/utils/logging.h src/utils/logging.cpp)
 
 add_executable(Playground
-        src/main.cpp
+        src/radio/main.cpp
         ${SOURCES})
 
 add_executable(odbiornik
-        ${SOURCES} src/odbiornik_main.cpp)
+        ${SOURCES} src/radio/odbiornik_main.cpp)
 
 add_executable(nadajnik
-        ${SOURCES} src/nadajnik_main.cpp)
+        ${SOURCES} src/radio/nadajnik_main.cpp src/radio/Transmitter.cpp src/radio/Transmitter.h src/radio/protocol.cpp)
 
 set(LIBRARIES
         boost_program_options)

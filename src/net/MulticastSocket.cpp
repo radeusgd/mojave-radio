@@ -5,9 +5,10 @@
 #include "MulticastSocket.h"
 
 #include <unistd.h>
-#include "errors.h"
+#include <utility>
+#include "utils/errors.h"
 
-MulticastSocket::MulticastSocket(Reactor &reactor, SockAddr multicast_address)
+MulticastSocket::MulticastSocket(Reactor &reactor, SockAddr multicast_address, MulticastMode mode)
     : reactor(reactor),
       multicast_address(multicast_address) {
     // initialize socket
@@ -35,17 +36,25 @@ MulticastSocket::MulticastSocket(Reactor &reactor, SockAddr multicast_address)
         raise_errno("setsockopt reuseaddr");
     }
 
-    // register to multicast group
-    struct ip_mreq ip_mreq{};
-    ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-    ip_mreq.imr_multiaddr = multicast_address.sin_addr;
-    if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &ip_mreq, sizeof(struct ip_mreq)) < 0) {
-        raise_errno("setsockopt add_membership");
+    if (mode == MulticastMode::REGISTER_TO_MULTICAST_GROUP) {
+        // register to multicast group
+        struct ip_mreq ip_mreq{};
+        ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+        ip_mreq.imr_multiaddr = multicast_address.sin_addr;
+        if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &ip_mreq, sizeof(struct ip_mreq)) < 0) {
+            raise_errno("setsockopt add_membership");
+        }
     }
 
     // bind
-    struct sockaddr_in addr = multicast_address;
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (mode == MulticastMode::REGISTER_TO_MULTICAST_GROUP) {
+        addr.sin_port = multicast_address.sin_port;
+    } else {
+        addr.sin_port = htons(0); // if we are not listening to multicast (only broadcasting), we can have any port
+    }
     if (bind(sock, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)) < 0) {
         raise_errno("bind");
     }
@@ -67,7 +76,7 @@ MulticastSocket::MulticastSocket(Reactor &reactor, SockAddr multicast_address)
             throw std::runtime_error("UDP shouldn't close");
         } else {
             buffer.resize(r);
-            onReceived(src_addr, buffer);
+            receive_hook(src_addr, buffer);
         }
     });
 }
@@ -89,7 +98,9 @@ void MulticastSocket::registerWriter() {
         if (r != pm.data.size()) {
             throw std::runtime_error("Partial datagram write?");
         }
+
         // message successfully written
+        if (pm.callback) pm.callback();
         send_queue.pop_front();
 
         // if we have no more packets to write, unregister
@@ -99,26 +110,36 @@ void MulticastSocket::registerWriter() {
     });
 }
 
-void MulticastSocket::send(SockAddr destination, const BytesBuffer &data) {
-    send_queue.emplace_back(destination, data);
+void MulticastSocket::send(SockAddr destination, const BytesBuffer &data, std::function<void()> callback) {
+    send_queue.emplace_back(destination, data, std::move(callback));
     if (send_queue.size() == 1) {
         // we are enqueuing the first packet, register the handler
         registerWriter();
     }
 }
 
-void MulticastSocket::send(SockAddr destination, BytesBuffer &&data) {
-    send_queue.emplace_back(destination, std::move(data));
+void MulticastSocket::send(SockAddr destination, BytesBuffer &&data, std::function<void()> callback) {
+    send_queue.emplace_back(destination, std::move(data), std::move(callback));
     if (send_queue.size() == 1) {
         // we are enqueuing the first packet, register the handler
         registerWriter();
     }
 }
 
-void MulticastSocket::broadcast(const BytesBuffer &data) {
-    send(multicast_address, data);
+void MulticastSocket::broadcast(const BytesBuffer &data, std::function<void()> callback) {
+    send(multicast_address, data, std::move(callback));
 }
 
-void MulticastSocket::broadcast(BytesBuffer &&data) {
-    send(multicast_address, std::move(data));
+void MulticastSocket::broadcast(BytesBuffer &&data, std::function<void()> callback) {
+    send(multicast_address, std::move(data), std::move(callback));
+}
+
+void MulticastSocket::setOnReceived(MulticastSocket::OnReceive hook) {
+    receive_hook = std::move(hook);
+}
+
+MulticastSocket::~MulticastSocket() {
+    reactor.cancelReading(sock);
+    reactor.cancelWriting(sock);
+    close(sock);
 }

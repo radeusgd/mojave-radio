@@ -7,33 +7,44 @@
 
 
 #include "MulticastSocket.h"
+#include <utility>
+#include <utils/logging.h>
 
-class TextMulticastSocket : private MulticastSocket {
+class TextMulticastSocket {
+public:
+    using OnReceive = std::function<void(SockAddr, const std::string&)>;
 private:
     BytesBuffer strToData(const std::string& str) {
-        return std::vector<char>(str.begin(), str.end());
+        std::vector<char> res(str.begin(), str.end());
+        res.push_back('\n');
+        return res;
     }
+
+    MulticastSocket underlying;
+    OnReceive receive_hook;
 public:
-    TextMulticastSocket(Reactor& reactor, SockAddr multicast_address)
-        : MulticastSocket(reactor, multicast_address) {}
+    TextMulticastSocket(Reactor &reactor, SockAddr multicast_address, MulticastMode mode)
+        : underlying(reactor, multicast_address, mode) {
+        underlying.setOnReceived([this](SockAddr source, const BytesBuffer &data) {
+            if (data.empty() || data.back() != '\n') {
+                dbg << "Text socket received a strange message\n";
+                return;
+            }
+            std::string str(data.begin(), std::prev(data.end())); // trime end-of-line
+            receive_hook(source, str);
+        });
+    }
 
     void send(SockAddr destination, const std::string& message) {
-        MulticastSocket::send(destination, strToData(message));
+        underlying.send(destination, strToData(message));
     }
 
     void broadcast(const std::string& message) {
-        MulticastSocket::broadcast(strToData(message));
+        underlying.broadcast(strToData(message));
     }
 
-    virtual void onReceived(SockAddr sender, const std::string& message) = 0;
-
-    void onReceived(SockAddr sender, const BytesBuffer& data) override {
-        if (data.empty() || data.back() != '\n') {
-            // TODO malformed data
-            return;
-        }
-        std::string str(data.begin(), std::prev(data.end()));
-        onReceived(sender, str);
+    void setOnReceived(OnReceive hook) {
+        receive_hook = std::move(hook);
     }
 };
 

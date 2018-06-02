@@ -4,7 +4,7 @@
 
 #include "StdinReader.h"
 #include <unistd.h>
-#include <errors.h>
+#include <utils/errors.h>
 
 static constexpr size_t BUFSIZE = 1024;
 

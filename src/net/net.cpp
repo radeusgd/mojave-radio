@@ -22,3 +22,13 @@ SockAddr make_sockaddr(IpAddr ip, uint16_t port) {
     addr.sin_port = htons(port);
     return addr;
 }
+
+std::string to_string(IpAddr ip) {
+    char buff[INET_ADDRSTRLEN];
+    std::string res = "[IP conversion error]";
+    const char* r = inet_ntop(AF_INET, &ip, buff, INET_ADDRSTRLEN);
+    if (r != NULL) {
+        res = buff;
+    }
+    return res;
+}

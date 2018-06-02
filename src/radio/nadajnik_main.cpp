@@ -1,12 +1,16 @@
 
 #include <boost/program_options.hpp>
 #include <iostream>
-#include "constants.h"
+#include <io/Reactor.h>
+#include <utils/logging.h>
+#include "utils/constants.h"
 #include "net/net.h"
+#include "Transmitter.h"
 
 namespace po = boost::program_options;
 
 int main(int argc, const char *argv[]) {
+    dbg << "hello\n";
     po::options_description desc("Usage");
     std::string MCAST_ADDR_STR;
     IpAddr MCAST_ADDR;
@@ -33,4 +37,19 @@ int main(int argc, const char *argv[]) {
         return 1;
     }
 
+    dbg << "MCAST_ADDR = " << MCAST_ADDR << "\n";
+    dbg << "NAME = " << NAZWA << "\n";
+    dbg << "CTRL_PORT = " << CTRL_PORT << "\n";
+
+    {
+        Reactor reactor;
+        Transmitter transmitter(reactor,
+                                MCAST_ADDR, DATA_PORT, CTRL_PORT,
+                                PSIZE, FSIZE, RTIME,
+                                NAZWA);
+        reactor.run();
+    }
+
+    dbg << "Clean exit\n";
+    return 0;
 }

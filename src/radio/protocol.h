@@ -7,10 +7,12 @@
 
 #include <cstdint>
 #include <io/io.h>
+#include <regex>
 
 extern const char* LOOKUP;
 extern const char* REPLY;
 extern const char* REXMIT;
+extern const std::regex REXMIT_REGEX;
 
 struct AudioPackage {
     uint64_t session_id;

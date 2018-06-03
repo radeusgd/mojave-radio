@@ -40,11 +40,19 @@ Transmitter::Transmitter(Reactor &reactor,
 
 void Transmitter::prepareControl() {
     ctrl_sock.setOnReceived([this](SockAddr source, const std::string& message) {
+        std::smatch regex_match_result;
         if (message == LOOKUP) {
             dbg << "Lookup request from " << source << "\n";
             sendReply(source);
-        } else if (message == REXMIT) {
+        } else if (std::regex_match(message, regex_match_result, REXMIT_REGEX)) {
+            if (regex_match_result.size() != 2) {
+                dbg << "Malformed REXMIT: " << message << "\n";
+                return;
+            }
+
             dbg << "Retransmission request from " << source << "\n";
+            std::string rexmit_list_s = regex_match_result[1];
+            dbg << rexmit_list_s << "\n";
         } else {
             dbg << "Unknown message: " << message << "\n";
         }

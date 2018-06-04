@@ -46,6 +46,8 @@ public:
              IpAddr multicast_addr, uint16_t data_port, uint16_t ctrl_port,
              size_t psize, size_t fsize, int rtime,
              const std::string &name);
+
+    Transmitter(const Transmitter&) = delete;
 };
 
 

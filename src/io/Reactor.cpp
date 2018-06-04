@@ -37,13 +37,18 @@ void Reactor::runAt(chrono::point t, std::function<void()> action) {
     timers.emplace(t, action);
 }
 
-void Reactor::runEvery(int ms, std::function<void()> action) {
+void Reactor::runEvery(int ms, std::function<void()> action, RunEveryStartType start) {
     chrono::duration d = std::chrono::milliseconds(ms);
     auto f = [action, d, this](auto self) {
         action();
         runAt(chrono::now() + d, self);
     };
-    runAt(chrono::now() + d, simple_y_combinator{f});
+
+    auto t = chrono::now();
+    if (start == RunEveryStartType::DEFER) {
+        t += d;
+    }
+    runAt(t, simple_y_combinator{f});
 }
 
 void Reactor::run() {

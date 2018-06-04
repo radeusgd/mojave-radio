@@ -54,7 +54,11 @@ public:
 
     void runAt(chrono::point t, std::function<void()> action);
 
-    void runEvery(int ms, std::function<void()> action);
+    enum class RunEveryStartType {
+        START_NOW,
+        DEFER
+    };
+    void runEvery(int ms, std::function<void()> action, RunEveryStartType start = RunEveryStartType::DEFER);
 
     void run();
 

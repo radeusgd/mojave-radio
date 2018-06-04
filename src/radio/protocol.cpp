@@ -6,6 +6,7 @@ const char* LOOKUP = "ZERO_SEVEN_COME_IN";
 const char* REPLY = "BOREWICZ_HERE";
 const char* REXMIT = "LOUDER_PLEASE";
 std::regex const REXMIT_REGEX(std::string(REXMIT) + " (\\d+(?:,\\d+)*)");
+std::regex const REPLY_REGEX(std::string(REPLY) + " ([\\d.]+) (\\d+) (.*)");
 
 BytesBuffer AudioPackage::pack(const AudioPackage &pkg) {
     BytesBuffer buff;

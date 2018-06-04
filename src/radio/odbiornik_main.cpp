@@ -16,12 +16,14 @@ int main(int argc, const char *argv[]) {
     uint16_t UI_PORT;
     size_t BSIZE;
     int RTIME;
+    std::string DEFAULT_STATION_NAME;
     desc.add_options()
         (",d", po::value<std::string>(&DISCOVER_ADDR_STR)->default_value("255.255.255.255"), "DISCOVER_ADDR")
         (",C", po::value<uint16_t>(&CTRL_PORT)->default_value(30000 + NR_ALBUMU_MOD), "CTRL_PORT")
         (",U", po::value<uint16_t>(&UI_PORT)->default_value(10000 + NR_ALBUMU_MOD), "UI_PORT")
         (",f", po::value<size_t>(&BSIZE)->default_value(64 * 1024), "BSIZE")
-        (",R", po::value<int>(&RTIME)->default_value(250), "RTIME");
+        (",R", po::value<int>(&RTIME)->default_value(250), "RTIME")
+        (",n", po::value<std::string>(&DEFAULT_STATION_NAME)->default_value(""), "DEFAULT_STATION_NAME");
 
     try {
         po::variables_map vm;
@@ -37,12 +39,13 @@ int main(int argc, const char *argv[]) {
     dbg << "CTRL_PORT = " << CTRL_PORT << "\n";
     dbg << "UI_PORT = " << UI_PORT << "\n";
     dbg << "BSIZE = " << BSIZE << "\n";
+    dbg << "DEFAULT_STATION_NAME = " << DEFAULT_STATION_NAME << "\n";
 
     {
         Reactor reactor;
         Receiver receiver(reactor,
                           DISCOVER_ADDR, CTRL_PORT, UI_PORT,
-                          BSIZE, RTIME);
+                          BSIZE, RTIME); // TODO DEFAULT_STATION_NAME
         reactor.run();
     }
 

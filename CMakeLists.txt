@@ -13,7 +13,7 @@ set(SOURCES
         src/utils/functional.h
         src/io/StdinReader.cpp src/io/StdinReader.h
         src/io/io.h
-        src/net/TcpServer.cpp src/net/TcpServer.h
+        src/net/TelnetServer.cpp src/net/TelnetServer.h
         src/net/UDPSocket.cpp src/net/UDPSocket.h
         src/utils/errors.h src/utils/errors.cpp
         src/net/TextUDPSocket.cpp src/net/TextUDPSocket.h

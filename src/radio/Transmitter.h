@@ -12,6 +12,7 @@
 #include <utils/logging.h>
 #include <sstream>
 #include <io/StdinReader.h>
+#include <utils/FIFOBuffer.h>
 #include "protocol.h"
 
 class Transmitter {
@@ -34,10 +35,10 @@ private:
     size_t psize;
     uint64_t first_byte_num = 0;
     uint64_t session_id;
+    FIFOBuffer<BytesBuffer> fifo;
+    std::set<size_t > rexmit_requests;
 
     void processPackage(BytesBuffer&& data);
-
-    std::set<int> rexmit_requests; // TODO
 
 public:
     Transmitter(Reactor& reactor,

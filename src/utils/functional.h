@@ -22,4 +22,13 @@ public:
     }
 };
 
+template<typename A, typename B> std::vector<B> map(std::vector<A> in, std::function<B(A)> f) {
+    std::vector<B> out;
+    out.reserve(in.size());
+    for (A a : in) {
+        out.push_back(f(a));
+    }
+    return out;
+};
+
 #endif //MOJAVE_RADIO_FUNCTIONAL_H

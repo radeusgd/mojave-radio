@@ -5,6 +5,8 @@
 #include "utils/errors.h"
 #include "Transmitter.h"
 #include <unistd.h>
+#include <utils/string.h>
+#include <utils/functional.h>
 
 void Transmitter::sendReply(SockAddr destination) {
     ctrl_sock.send(destination, LOOKUP_REPLY);
@@ -16,6 +18,7 @@ Transmitter::Transmitter(Reactor &reactor,
                          const std::string &name)
     : reactor(reactor),
       psize(psize),
+      fifo(fsize / psize),
       ctrl_sock(reactor, make_sockaddr(multicast_addr, ctrl_port), MulticastMode::REGISTER_TO_MULTICAST_GROUP),
       data_sock(reactor, make_sockaddr(multicast_addr, data_port), MulticastMode::MULTICAST_SEND_ONLY)
 {
@@ -37,6 +40,13 @@ Transmitter::Transmitter(Reactor &reactor,
     prepareRetransmissions(rtime);
 }
 
+static uint64_t str_to_uint64(std::string s) {
+    std::stringstream ss(s);
+    uint64_t x;
+    ss >> x;
+    return x;
+}
+
 
 void Transmitter::prepareControl() {
     ctrl_sock.setOnReceived([this](SockAddr source, const std::string& message) {
@@ -52,7 +62,15 @@ void Transmitter::prepareControl() {
 
             dbg << "Retransmission request from " << source << "\n";
             std::string rexmit_list_s = regex_match_result[1];
-            dbg << rexmit_list_s << "\n";
+            std::vector<uint64_t> rexmit_list = map(split(rexmit_list_s),
+                std::function<uint64_t(std::string)>(str_to_uint64));
+            for (auto first_byte_num : rexmit_list) {
+                if (first_byte_num % psize != 0) {
+                    dbg << first_byte_num << " is not divisible by psize (" << psize << ")\n";
+                    continue;
+                }
+                rexmit_requests.insert(first_byte_num / psize);
+            }
         } else {
             dbg << "Unknown message: " << message << "\n";
         }
@@ -93,9 +111,16 @@ void Transmitter::prepareStdin() {
 
 void Transmitter::prepareRetransmissions(int rtime) {
     reactor.runEvery(rtime, [this]() {
-        if (!rexmit_requests.empty()) {
-            // TODO
+        for (auto requested_pkg_id : rexmit_requests) {
+            if (!fifo.has(requested_pkg_id)) {
+                dbg << "Cannot retransmit " << requested_pkg_id << "\n";
+                continue; // drop requests for unavailable data
+            }
+
+            dbg << "Retransmitting " << requested_pkg_id << "\n";
+            data_sock.broadcast(fifo.get(requested_pkg_id));
         }
+        rexmit_requests.clear();
     });
 }
 
@@ -105,11 +130,12 @@ void Transmitter::processPackage(BytesBuffer&& data) {
     AudioPackage pkg;
     pkg.session_id = session_id;
     pkg.first_byte_num = first_byte_num;
+    assert(pkg.first_byte_num % psize == 0);
     first_byte_num += psize;
     pkg.audio_data = std::move(data);
 
     BytesBuffer packed = AudioPackage::pack(pkg);
-    // TODO store package for REXMIT
+    fifo.append(packed);
 
     data_sock.broadcast(packed);
 }

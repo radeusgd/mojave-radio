@@ -23,7 +23,7 @@ set(SOURCES
         src/utils/errors.cpp
         src/net/TextMulticastSocket.cpp
         src/net/TextMulticastSocket.h
-        src/net/net.cpp src/utils/constants.h src/utils/FIFOBuffer.cpp src/utils/FIFOBuffer.h src/radio/protocol.h src/utils/logging.h src/utils/logging.cpp)
+        src/net/net.cpp src/utils/constants.h src/utils/FIFOBuffer.h src/radio/protocol.h src/utils/logging.h src/utils/logging.cpp src/utils/string.h src/utils/string.cpp)
 
 add_executable(Playground
         src/radio/main.cpp

@@ -12,21 +12,14 @@
 
 static constexpr size_t BUFSIZE = 1024;
 
-enum class MulticastMode {
-    REGISTER_TO_MULTICAST_GROUP, // this mode registers to the multicast group and listens for messages sent there
-    MULTICAST_SEND_ONLY // this mode listens on a normal port and is just allowed to send messages to the multicast address
-};
-
 /*
- * A server that can receive and send packets to/from a multicast address
- * or reply to just one of the senders.
+ * An UDP socket.
  */
-class MulticastSocket {
+class UDPSocket {
 public:
     using OnReceive = std::function<void(SockAddr, const BytesBuffer&)>;
 private:
     int sock;
-    SockAddr multicast_address;
     struct PendingMessage {
         SockAddr destination;
         BytesBuffer data;
@@ -41,17 +34,17 @@ private:
 
     void registerWriter();
 public:
-    MulticastSocket(Reactor& reactor, SockAddr multicast_address, MulticastMode mode);
+    UDPSocket(Reactor& reactor, uint16_t bind_port = 0);
+
+    void registerToMulticastGroup(IpAddr addr);
+    void unregisterFromMulticastGroup(IpAddr addr);
 
     void send(SockAddr destination, const BytesBuffer& data, std::function<void()> callback = nullptr);
     void send(SockAddr destination, BytesBuffer&& data, std::function<void()> callback = nullptr);
 
-    void broadcast(const BytesBuffer& data, std::function<void()> callback = nullptr);
-    void broadcast(BytesBuffer&& data, std::function<void()> callback = nullptr);
-
     void setOnReceived(OnReceive hook);
 
-    ~MulticastSocket();
+    ~UDPSocket();
 };
 
 

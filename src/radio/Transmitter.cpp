@@ -19,8 +19,9 @@ Transmitter::Transmitter(Reactor &reactor,
     : reactor(reactor),
       psize(psize),
       fifo(fsize / psize),
-      ctrl_sock(reactor, make_sockaddr(multicast_addr, ctrl_port), MulticastMode::REGISTER_TO_MULTICAST_GROUP),
-      data_sock(reactor, make_sockaddr(multicast_addr, data_port), MulticastMode::MULTICAST_SEND_ONLY)
+      broadcast_destination(make_sockaddr(multicast_addr, data_port)),
+      ctrl_sock(reactor, ctrl_port),
+      data_sock(reactor, data_port)
 {
     // we are not listening on data_port
     data_sock.setOnReceived([](SockAddr source, const BytesBuffer& data) {});
@@ -35,6 +36,7 @@ Transmitter::Transmitter(Reactor &reactor,
     time_t now = time(NULL);
     session_id = static_cast<uint64_t>(now);
 
+    ctrl_sock.registerToMulticastGroup(multicast_addr);
     prepareControl();
     prepareStdin();
     prepareRetransmissions(rtime);
@@ -118,7 +120,7 @@ void Transmitter::prepareRetransmissions(int rtime) {
             }
 
             dbg << "Retransmitting " << requested_pkg_id << "\n";
-            data_sock.broadcast(fifo.get(requested_pkg_id));
+            data_sock.send(broadcast_destination, fifo.get(requested_pkg_id));
         }
         rexmit_requests.clear();
     });
@@ -137,5 +139,5 @@ void Transmitter::processPackage(BytesBuffer&& data) {
     BytesBuffer packed = AudioPackage::pack(pkg);
     fifo.append(packed);
 
-    data_sock.broadcast(packed);
+    data_sock.send(broadcast_destination, packed);
 }

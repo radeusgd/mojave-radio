@@ -6,11 +6,11 @@
 #define MOJAVE_RADIO_TEXTMULTICASTSOCKET_H
 
 
-#include "MulticastSocket.h"
+#include "UDPSocket.h"
 #include <utility>
 #include <utils/logging.h>
 
-class TextMulticastSocket {
+class TextUDPSocket {
 public:
     using OnReceive = std::function<void(SockAddr, const std::string&)>;
 private:
@@ -20,14 +20,14 @@ private:
         return res;
     }
 
-    MulticastSocket underlying;
+    UDPSocket underlying;
     OnReceive receive_hook;
 public:
-    TextMulticastSocket(Reactor &reactor, SockAddr multicast_address, MulticastMode mode)
-        : underlying(reactor, multicast_address, mode) {
+    TextUDPSocket(Reactor &reactor, uint16_t port = 0)
+        : underlying(reactor, port) {
         underlying.setOnReceived([this](SockAddr source, const BytesBuffer &data) {
             if (data.empty() || data.back() != '\n') {
-                dbg << "Text socket received a strange message\n";
+                dbg << "Text socket received a malformed message\n";
                 return;
             }
             std::string str(data.begin(), std::prev(data.end())); // trime end-of-line
@@ -35,12 +35,16 @@ public:
         });
     }
 
-    void send(SockAddr destination, const std::string& message) {
-        underlying.send(destination, strToData(message));
+    void registerToMulticastGroup(IpAddr addr) {
+        underlying.registerToMulticastGroup(addr);
     }
 
-    void broadcast(const std::string& message) {
-        underlying.broadcast(strToData(message));
+    void unregisterFromMulticastGroup(IpAddr addr) {
+        underlying.unregisterFromMulticastGroup(addr);
+    }
+
+    void send(SockAddr destination, const std::string& message) {
+        underlying.send(destination, strToData(message));
     }
 
     void setOnReceived(OnReceive hook) {

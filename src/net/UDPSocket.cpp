@@ -2,15 +2,14 @@
 // Created by radeusgd on 28.05.18.
 //
 
-#include "MulticastSocket.h"
+#include "UDPSocket.h"
 
 #include <unistd.h>
 #include <utility>
 #include "utils/errors.h"
 
-MulticastSocket::MulticastSocket(Reactor &reactor, SockAddr multicast_address, MulticastMode mode)
-    : reactor(reactor),
-      multicast_address(multicast_address) {
+UDPSocket::UDPSocket(Reactor &reactor, uint16_t port)
+    : reactor(reactor) {
     // initialize socket
     sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
     if (sock < 0) {
@@ -36,25 +35,11 @@ MulticastSocket::MulticastSocket(Reactor &reactor, SockAddr multicast_address, M
         raise_errno("setsockopt reuseaddr");
     }
 
-    if (mode == MulticastMode::REGISTER_TO_MULTICAST_GROUP) {
-        // register to multicast group
-        struct ip_mreq ip_mreq{};
-        ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-        ip_mreq.imr_multiaddr = multicast_address.sin_addr;
-        if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &ip_mreq, sizeof(struct ip_mreq)) < 0) {
-            raise_errno("setsockopt add_membership");
-        }
-    }
-
     // bind
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (mode == MulticastMode::REGISTER_TO_MULTICAST_GROUP) {
-        addr.sin_port = multicast_address.sin_port;
-    } else {
-        addr.sin_port = htons(0); // if we are not listening to multicast (only broadcasting), we can have any port
-    }
+    addr.sin_port = htons(port);
     if (bind(sock, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)) < 0) {
         raise_errno("bind");
     }
@@ -81,7 +66,7 @@ MulticastSocket::MulticastSocket(Reactor &reactor, SockAddr multicast_address, M
     });
 }
 
-void MulticastSocket::registerWriter() {
+void UDPSocket::registerWriter() {
     reactor.setOnWriteable(sock, [this]() {
         assert (!send_queue.empty());
         PendingMessage &pm = send_queue.front();
@@ -110,7 +95,25 @@ void MulticastSocket::registerWriter() {
     });
 }
 
-void MulticastSocket::send(SockAddr destination, const BytesBuffer &data, std::function<void()> callback) {
+void UDPSocket::registerToMulticastGroup(IpAddr addr) {
+    struct ip_mreq ip_mreq{};
+    ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    ip_mreq.imr_multiaddr = addr;
+    if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &ip_mreq, sizeof(struct ip_mreq)) < 0) {
+        raise_errno("setsockopt add_membership");
+    }
+}
+
+void UDPSocket::unregisterFromMulticastGroup(IpAddr addr) {
+    struct ip_mreq ip_mreq{};
+    ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    ip_mreq.imr_multiaddr = addr;
+    if (setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &ip_mreq, sizeof(struct ip_mreq)) < 0) {
+        raise_errno("setsockopt drop_membership");
+    }
+}
+
+void UDPSocket::send(SockAddr destination, const BytesBuffer &data, std::function<void()> callback) {
     send_queue.emplace_back(destination, data, std::move(callback));
     if (send_queue.size() == 1) {
         // we are enqueuing the first packet, register the handler
@@ -118,7 +121,7 @@ void MulticastSocket::send(SockAddr destination, const BytesBuffer &data, std::f
     }
 }
 
-void MulticastSocket::send(SockAddr destination, BytesBuffer &&data, std::function<void()> callback) {
+void UDPSocket::send(SockAddr destination, BytesBuffer &&data, std::function<void()> callback) {
     send_queue.emplace_back(destination, std::move(data), std::move(callback));
     if (send_queue.size() == 1) {
         // we are enqueuing the first packet, register the handler
@@ -126,20 +129,13 @@ void MulticastSocket::send(SockAddr destination, BytesBuffer &&data, std::functi
     }
 }
 
-void MulticastSocket::broadcast(const BytesBuffer &data, std::function<void()> callback) {
-    send(multicast_address, data, std::move(callback));
-}
-
-void MulticastSocket::broadcast(BytesBuffer &&data, std::function<void()> callback) {
-    send(multicast_address, std::move(data), std::move(callback));
-}
-
-void MulticastSocket::setOnReceived(MulticastSocket::OnReceive hook) {
+void UDPSocket::setOnReceived(UDPSocket::OnReceive hook) {
     receive_hook = std::move(hook);
 }
 
-MulticastSocket::~MulticastSocket() {
+UDPSocket::~UDPSocket() {
     reactor.cancelReading(sock);
     reactor.cancelWriting(sock);
     close(sock);
 }
+

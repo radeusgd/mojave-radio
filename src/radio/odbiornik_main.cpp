@@ -1,5 +1,7 @@
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <utils/logging.h>
+#include <io/Reactor.h>
 #include "utils/constants.h"
 #include "net/net.h"
 
@@ -28,4 +30,18 @@ int main(int argc, const char *argv[]) {
         std::cerr << e.what() << "\n" << desc;
         return 1;
     }
+
+    dbg << "DISCOVER_ADDR = " << DISCOVER_ADDR << "\n";
+    dbg << "CTRL_PORT = " << CTRL_PORT << "\n";
+    dbg << "UI_PORT = " << UI_PORT << "\n";
+    dbg << "BSIZE = " << BSIZE << "\n";
+
+    {
+        Reactor reactor;
+
+        reactor.run();
+    }
+
+    dbg << "Clean exit\n";
+    return 0;
 }

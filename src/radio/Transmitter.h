@@ -7,8 +7,8 @@
 
 
 #include <io/Reactor.h>
-#include <net/MulticastSocket.h>
-#include <net/TextMulticastSocket.h>
+#include <net/UDPSocket.h>
+#include <net/TextUDPSocket.h>
 #include <utils/logging.h>
 #include <sstream>
 #include <io/StdinReader.h>
@@ -18,8 +18,9 @@
 class Transmitter {
 private:
     Reactor& reactor;
-    TextMulticastSocket ctrl_sock;
-    MulticastSocket data_sock;
+    TextUDPSocket ctrl_sock;
+    UDPSocket data_sock;
+    SockAddr broadcast_destination;
 
     std::string LOOKUP_REPLY;
     // initializers

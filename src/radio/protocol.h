@@ -21,7 +21,7 @@ struct AudioPackage {
     BytesBuffer audio_data;
 
     static BytesBuffer pack(const AudioPackage &pkg);
-    static AudioPackage unpack(const BytesBuffer &pkg);
+    static AudioPackage unpack(const BytesBuffer &data);
 };
 
 #endif //MOJAVE_RADIO_PROTOCOL_H

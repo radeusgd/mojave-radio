@@ -24,11 +24,9 @@ set(SOURCES
         src/utils/logging.h src/utils/logging.cpp
         src/utils/string.h src/utils/string.cpp
         src/radio/Receiver.cpp src/radio/Receiver.h
-        src/radio/Transmitter.cpp src/radio/Transmitter.h)
+        src/radio/Transmitter.cpp src/radio/Transmitter.h src/io/StdoutWriter.cpp src/io/StdoutWriter.h)
 
-add_executable(Playground
-        src/radio/main.cpp
-        ${SOURCES})
+# add_executable(Playground src/radio/main.cpp ${SOURCES})
 
 add_executable(odbiornik
         ${SOURCES} src/radio/odbiornik_main.cpp)
@@ -39,6 +37,6 @@ add_executable(nadajnik
 set(LIBRARIES
         boost_program_options)
 
-TARGET_LINK_LIBRARIES(Playground LINK_PUBLIC ${LIBRARIES})
+#TARGET_LINK_LIBRARIES(Playground LINK_PUBLIC ${LIBRARIES})
 TARGET_LINK_LIBRARIES(odbiornik LINK_PUBLIC ${LIBRARIES})
 TARGET_LINK_LIBRARIES(nadajnik LINK_PUBLIC ${LIBRARIES})

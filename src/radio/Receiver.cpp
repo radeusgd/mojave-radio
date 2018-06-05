@@ -2,8 +2,9 @@
 // Created by radeusgd on 04.06.18.
 //
 
-#include <utils/string.h>
+#include "utils/string.h"
 #include <utility>
+#include <utils/functional.h>
 #include "Receiver.h"
 #include "protocol.h"
 
@@ -13,15 +14,18 @@ Receiver::Receiver(Reactor& reactor,
                    std::string default_station_name)
     : reactor(reactor),
       discovery_sock(reactor),
+      audio_sock(reactor),
+      stdout_writer(reactor),
       ui_server(reactor, ui_port),
       default_station_name(std::move(default_station_name))
 {
     prepareDiscovery(discover_addr, ctrl_port);
     prepareMenu();
+    prepareAudio();
 }
 
 void Receiver::prepareDiscovery(IpAddr discover_addr, uint16_t ctrl_port) {
-    SockAddr discovery_broadcast_addr = make_sockaddr(discover_addr, ctrl_port);
+    SockAddr discovery_broadcast_addr = SockAddr(discover_addr, ctrl_port);
 
     discovery_sock.setOnReceived([this](SockAddr source, const std::string& message) {
         std::smatch smatch;
@@ -29,16 +33,16 @@ void Receiver::prepareDiscovery(IpAddr discover_addr, uint16_t ctrl_port) {
             try {
                 if (smatch.size() != 4) throw std::runtime_error("wrong amount of matches");
                 std::string ip_s = smatch[1];
-                IpAddr ip = ipaddr_from_string(ip_s);
+                IpAddr ip = IpAddr::from_string(ip_s);
 
                 int port_i = stoi(smatch[2]);
                 if (port_i < 0 || port_i > MAX_PORT_NUMBER) throw std::runtime_error("port out of range");
                 auto port = static_cast<uint16_t>(port_i);
+                dbg << smatch[2] << ", " << port_i << ", " << port << "\n";
 
                 Station station;
                 station.name = smatch[3];
-                station.addr = make_sockaddr(ip, port);
-                dbg << "Discovered " << station.name << " @ " << station.addr << "\n";
+                station.addr = SockAddr(ip, port);
 
                 handleReplyFrom(station);
             } catch (std::runtime_error& e) {
@@ -87,6 +91,7 @@ void Receiver::prepareMenu() {
 }
 
 void Receiver::handleReplyFrom(Receiver::Station station) {
+    dbg << "Discovered " << station.name << " @ " << station.addr << "\n";
     auto now = chrono::now();
     chrono::duration dt = std::chrono::milliseconds(DISCOVER_TIMEOUT);
     stations.insert_or_assign(station, now); // set that the station has been heard from recently
@@ -110,7 +115,8 @@ void Receiver::stationListHasChanged() {
         // if we are already playing something, check if it's still alive
         if (stations.find(*current_station) == stations.end()) {
             // if lost our current station
-            current_station = std::nullopt; // stop listening TODO stop listening
+            stopListening(*current_station);
+            current_station = std::nullopt;
             // rerun update to try to listen to some other station if available
             return stationListHasChanged();
         }
@@ -119,7 +125,7 @@ void Receiver::stationListHasChanged() {
         // if there's any station available, pick the first one
         if (!stations.empty()) {
             current_station = stations.begin()->first;
-            // TODO start listening
+            startListening(*current_station);
         }
     }
     refreshMenu();
@@ -143,4 +149,36 @@ void Receiver::refreshMenu() {
     }
     ss << bar << "\n";
     ui_server.setWindowContents(ss.str());
+}
+
+void Receiver::startListening(Receiver::Station station) {
+    // TODO clear buffers etc.
+    dbg << "Starting listening to " << station.name << " @ " << station.addr << "\n";
+    audio_sock.rebind(station.addr.port());
+    audio_sock.registerToMulticastGroup(station.addr.ip());
+}
+
+void Receiver::stopListening(Receiver::Station station) {
+    // don't know if do anything actually
+    dbg << "Stopping listening to " << station.name << " @ " << station.addr << "\n";
+}
+
+void Receiver::prepareAudio() {
+    // TODO checking session_id and shit
+    audio_sock.setOnReceived([this](SockAddr source, const BytesBuffer& data) {
+        AudioPackage pkg = AudioPackage::unpack(data);
+        dbg << "Received " << pkg.first_byte_num << " @ " << pkg.session_id << "\n";
+        tst_stdout_buffer.emplace_back(std::move(pkg.audio_data));
+
+        auto write_one = [this](std::function<void()> self) {
+            //if (tst_stdout_buffer.empty())
+                //return;
+            //stdout_writer.write(tst_stdout_buffer.front(), self);
+            //tst_stdout_buffer.pop_front();
+        };
+        if (!stdout_writer.is_writing()) {
+            simple_y_combinator{write_one}();
+            stdout_writer.write(tst_stdout_buffer.back(), [](){});
+        }
+    });
 }

@@ -31,7 +31,7 @@ int main(int argc, const char *argv[]) {
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);
         po::notify(vm);
-        MCAST_ADDR = ipaddr_from_string(MCAST_ADDR_STR);
+        MCAST_ADDR = IpAddr::from_string(MCAST_ADDR_STR);
     } catch (std::exception &e) { // common ancestor for boost::program_options::invalid_option_value and std::runtime_error
         std::cerr << e.what() << "\n" << desc;
         return 1;

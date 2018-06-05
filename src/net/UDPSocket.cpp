@@ -10,6 +10,19 @@
 
 UDPSocket::UDPSocket(Reactor &reactor, uint16_t port)
     : reactor(reactor) {
+    bind(port);
+}
+
+void UDPSocket::unbind() {
+    if (sock == -1)
+        return;
+    reactor.cancelReading(sock);
+    reactor.cancelWriting(sock);
+    close(sock);
+    sock = -1;
+}
+
+void UDPSocket::bind(uint16_t port) {
     // initialize socket
     sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
     if (sock < 0) {
@@ -40,12 +53,12 @@ UDPSocket::UDPSocket(Reactor &reactor, uint16_t port)
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(port);
-    if (bind(sock, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)) < 0) {
+    if (::bind(sock, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)) < 0) {
         raise_errno("bind");
     }
 
     // register reader
-    reactor.setOnReadable(sock, [&reactor, this]() {
+    reactor.setOnReadable(sock, [this]() {
         std::vector<char> buffer;
         buffer.resize(BUFSIZE);
         SockAddr src_addr;
@@ -98,7 +111,7 @@ void UDPSocket::registerWriter() {
 void UDPSocket::registerToMulticastGroup(IpAddr addr) {
     struct ip_mreq ip_mreq{};
     ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-    ip_mreq.imr_multiaddr = addr;
+    ip_mreq.imr_multiaddr = addr.underlying;
     if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &ip_mreq, sizeof(struct ip_mreq)) < 0) {
         raise_errno("setsockopt add_membership");
     }
@@ -107,7 +120,7 @@ void UDPSocket::registerToMulticastGroup(IpAddr addr) {
 void UDPSocket::unregisterFromMulticastGroup(IpAddr addr) {
     struct ip_mreq ip_mreq{};
     ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-    ip_mreq.imr_multiaddr = addr;
+    ip_mreq.imr_multiaddr = addr.underlying;
     if (setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &ip_mreq, sizeof(struct ip_mreq)) < 0) {
         raise_errno("setsockopt drop_membership");
     }
@@ -134,8 +147,12 @@ void UDPSocket::setOnReceived(UDPSocket::OnReceive hook) {
 }
 
 UDPSocket::~UDPSocket() {
-    reactor.cancelReading(sock);
-    reactor.cancelWriting(sock);
-    close(sock);
+    unbind();
+}
+
+void UDPSocket::rebind(uint16_t new_port) {
+    // TODO check if not the same as old port, maybe no need to do this
+    unbind();
+    bind(new_port);
 }
 

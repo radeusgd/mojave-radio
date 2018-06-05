@@ -28,14 +28,17 @@ private:
             : destination(destination), data(std::move(data)), callback(std::move(callback)) {}
     };
     std::deque<PendingMessage> send_queue;
+    void unbind(); // unbind discards all messages that haven't been sent
+    void bind(uint16_t port);
 
     Reactor& reactor;
     OnReceive receive_hook;
 
     void registerWriter();
 public:
-    UDPSocket(Reactor& reactor, uint16_t bind_port = 0);
+    explicit UDPSocket(Reactor& reactor, uint16_t bind_port = 0);
 
+    void rebind(uint16_t new_port);
     void registerToMulticastGroup(IpAddr addr);
     void unregisterFromMulticastGroup(IpAddr addr);
 

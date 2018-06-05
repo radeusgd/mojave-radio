@@ -19,7 +19,7 @@ Transmitter::Transmitter(Reactor &reactor,
     : reactor(reactor),
       psize(psize),
       fifo(fsize / psize),
-      broadcast_destination(make_sockaddr(multicast_addr, data_port)),
+      broadcast_destination(SockAddr(multicast_addr, data_port)),
       ctrl_sock(reactor, ctrl_port),
       data_sock(reactor, data_port)
 {
@@ -81,8 +81,8 @@ void Transmitter::prepareControl() {
 
 void Transmitter::prepareStdin() {
     stdin_buff.resize(psize);
-    // start reading from stdin
-    reactor.setOnReadable(0, [this]() {
+    static constexpr int STDIN = 0;
+    reactor.setOnReadable(STDIN, [this]() {
         assert(in_buffer < psize);
         size_t to_read = psize - in_buffer;
         //dbg << "Want to read " << to_read << std::endl;

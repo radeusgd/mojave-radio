@@ -45,7 +45,7 @@ int main(int argc, const char *argv[]) {
         Reactor reactor;
         Receiver receiver(reactor,
                           DISCOVER_ADDR, CTRL_PORT, UI_PORT,
-                          BSIZE, RTIME); // TODO DEFAULT_STATION_NAME
+                          BSIZE, RTIME, DEFAULT_STATION_NAME);
         reactor.run();
     }
 

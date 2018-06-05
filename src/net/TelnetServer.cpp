@@ -74,7 +74,10 @@ void TelnetServer::clientConnected(int c_sock) {
             return;
         }
 
-        dbg << "Recvd " << r << " bytes\n";
+        buff.resize(r);
+        for (char b : buff) {
+            clientReceivedByte(c_sock, b);
+        }
     });
 
     sendOption(c_sock, OP_DONT, OPT_LINEMODE); // TODO is it needed?
@@ -91,6 +94,72 @@ void TelnetServer::clientDisconnected(int c_sock) {
     reactor.cancelReading(c_sock);
     if (close(c_sock) == -1) {
         raise_errno("close");
+    }
+}
+
+void TelnetServer::clientReceivedByte(int c_sock, unsigned char byte) {
+    Client& c = clients[c_sock];
+    using DM = Client::IncomingDataMode;
+    constexpr unsigned char TELNET_ESCAPE = 255;
+    // this encodes a state machine of Telnet protocol
+    // we want to keep track of escape sequences and subnegotiations
+    // but don't need their actual content, as we don't react to it in any way
+    // we only extract arrow-key codes and act accordingly
+    switch (c.mode) {
+        case DM::NORMAL:
+            if (byte == TELNET_ESCAPE) {
+                c.mode = DM::ESCAPE;
+            } else if (byte == 27) {
+                c.mode = DM::VT1;
+            } else {
+                // we are not interested in normal characters being pressed
+            }
+            break;
+        case DM::ESCAPE:
+            if (byte == OP_SB) {
+                // start subnegotiation
+                c.mode = DM::SUBNEGOTIATION;
+            } else if (251 <= byte && byte <= 254) {
+                // handling special options
+                c.mode = DM::OPTION;
+            } else {
+                // if byte == 255 - handle 255
+                // but we don't handle raw bytes so doesn't matter
+                c.mode = DM::NORMAL;
+            }
+            break;
+        case DM::OPTION:
+                c.mode = DM::NORMAL;
+            break;
+        case DM::SUBNEGOTIATION:
+            // we actually don't process what's inside subnegotiation
+            if (byte == TELNET_ESCAPE) {
+                c.mode = DM::SUBNEGOTIATION_ESCAPE;
+            }
+            break;
+        case DM::SUBNEGOTIATION_ESCAPE:
+            if (byte == OP_SE) {
+                c.mode = DM::NORMAL;
+            } else {
+                // we're not interested in other escape values
+            }
+            break;
+        case DM::VT1:
+            if (byte == 91) {
+                c.mode = DM::VT1_SUB;
+            } else {
+                // we are not interested in such escape sequence so go back to normal
+                c.mode = DM::NORMAL;
+            }
+            break;
+        case DM::VT1_SUB:
+            c.mode = DM::NORMAL;
+            unsigned char keys[] = {KEY_UP, KEY_DOWN};
+            for (unsigned char k : keys) {
+                if (byte == k) {
+                    input_handler(static_cast<InputKey>(k));
+                }
+            }
     }
 }
 
@@ -134,5 +203,9 @@ TelnetServer::~TelnetServer() {
     }
     reactor.cancelReading(sock);
     close(sock);
+}
+
+void TelnetServer::setInputHandler(std::function<void(InputKey)> handler) {
+    input_handler = handler;
 }
 

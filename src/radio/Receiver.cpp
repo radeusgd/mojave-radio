@@ -38,7 +38,6 @@ void Receiver::prepareDiscovery(IpAddr discover_addr, uint16_t ctrl_port) {
                 int port_i = stoi(smatch[2]);
                 if (port_i < 0 || port_i > MAX_PORT_NUMBER) throw std::runtime_error("port out of range");
                 auto port = static_cast<uint16_t>(port_i);
-                dbg << smatch[2] << ", " << port_i << ", " << port << "\n";
 
                 Station station;
                 station.name = smatch[3];
@@ -63,8 +62,20 @@ void Receiver::moveMenuChoice(std::function<Stations::iterator(const Stations&, 
     if (current_station) {
         // if no station is playing there's no "choice" to move
         auto it = stations.find(*current_station);
-        assert (it != stations.end());
-        current_station = mod(stations, it)->first;
+        if (it == stations.end()) {
+            dbg << "\n\n\nTHIS SHOULDN'T HAPPEN!!!\n";
+            dbg << __FILE__ << ":" << __LINE__ << "\n";
+            dbg << current_station->name << ", " << current_station->addr << "\n";
+            dbg << "Recovering...\n";
+            stationListHasChanged();
+        }
+        auto new_station = mod(stations, it)->first;
+        if (new_station != *current_station) {
+            stopListening(*current_station);
+            current_station = new_station;
+            startListening(new_station);
+            refreshMenu();
+        }
     }
 }
 
@@ -85,7 +96,6 @@ void Receiver::prepareMenu() {
                });
                break;
        }
-       refreshMenu();
     });
     refreshMenu();
 }
@@ -167,18 +177,12 @@ void Receiver::prepareAudio() {
     // TODO checking session_id and shit
     audio_sock.setOnReceived([this](SockAddr source, const BytesBuffer& data) {
         AudioPackage pkg = AudioPackage::unpack(data);
-        dbg << "Received " << pkg.first_byte_num << " @ " << pkg.session_id << "\n";
-        tst_stdout_buffer.emplace_back(std::move(pkg.audio_data));
-
-        auto write_one = [this](std::function<void()> self) {
-            //if (tst_stdout_buffer.empty())
-                //return;
-            //stdout_writer.write(tst_stdout_buffer.front(), self);
-            //tst_stdout_buffer.pop_front();
-        };
-        if (!stdout_writer.is_writing()) {
-            simple_y_combinator{write_one}();
-            stdout_writer.write(tst_stdout_buffer.back(), [](){});
-        }
+        handleIncomingPackage(std::move(pkg));
     });
+}
+
+void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
+    if (!stdout_writer.is_writing()) {
+        stdout_writer.write(pkg.audio_data, [](){});
+    }
 }

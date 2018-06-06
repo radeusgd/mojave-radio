@@ -7,6 +7,9 @@
 #include <unistd.h>
 #include <utility>
 #include "utils/errors.h"
+#include <sys/ioctl.h>
+
+static constexpr size_t BUFFSIZE = 64 * 1024 + 1;
 
 UDPSocket::UDPSocket(Reactor &reactor, uint16_t port)
     : reactor(reactor) {
@@ -60,10 +63,11 @@ void UDPSocket::bind(uint16_t port) {
     // register reader
     reactor.setOnReadable(sock, [this]() {
         std::vector<char> buffer;
-        buffer.resize(BUFSIZE);
+
+        buffer.resize(BUFFSIZE);
         SockAddr src_addr;
         socklen_t len = sizeof(src_addr);
-        ssize_t r = recvfrom(sock, &buffer[0], BUFSIZE, MSG_DONTWAIT,
+        ssize_t r = recvfrom(sock, &buffer[0], BUFFSIZE, MSG_DONTWAIT,
                              reinterpret_cast<sockaddr *>(&src_addr), &len);
         if (r < 0) {
             raise_errno("sock read");

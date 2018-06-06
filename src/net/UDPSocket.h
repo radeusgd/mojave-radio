@@ -10,8 +10,6 @@
 #include <deque>
 #include "net.h"
 
-static constexpr size_t BUFSIZE = 1024;
-
 /*
  * An UDP socket.
  */

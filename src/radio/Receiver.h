@@ -12,6 +12,7 @@
 #include <map>
 #include <net/TelnetServer.h>
 #include <io/StdoutWriter.h>
+#include "protocol.h"
 
 class Receiver {
 private:
@@ -43,12 +44,15 @@ private:
             return name == o.name
                    && addr == o.addr;
         }
+
+        bool operator!=(const Station& o) const {
+            return !(*this == o);
+        }
     };
 
     using Stations = std::map<Station, chrono::point>;
     Stations stations; // mapping station to its last reply
     std::optional<Station> current_station = std::nullopt;
-    std::deque<BytesBuffer> tst_stdout_buffer; // TODO
 
     void prepareDiscovery(IpAddr discover_addr, uint16_t ctrl_port);
     void prepareMenu();
@@ -62,6 +66,7 @@ private:
 
     void startListening(Station station);
     void stopListening(Station station);
+    void handleIncomingPackage(AudioPackage&& pkg);
 public:
     Receiver(Reactor& reactor,
              IpAddr discover_addr, uint16_t ctrl_port, uint16_t ui_port,

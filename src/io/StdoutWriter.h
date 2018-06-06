@@ -25,6 +25,8 @@ public:
     bool is_writing() const {
         return !buff.empty();
     }
+
+    ~StdoutWriter();
 };
 
 

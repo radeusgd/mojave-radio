@@ -37,6 +37,7 @@ private:
     std::multiset<TimedAction> timers;
 
     bool running = false;
+    bool dirty = false;
 
     void cleanIfEmpty(int fd);
 
@@ -61,6 +62,16 @@ public:
     void runEvery(int ms, std::function<void()> action, RunEveryStartType start = RunEveryStartType::DEFER);
 
     void run();
+
+    /*
+     * When some operation makes it possible for some file descriptor
+     * that could have been marked ready by poll to be no longer ready
+     * (closing a socket, changing listen address etc.)
+     * it should call markDirty to make sure an invalidated callback doesn't get called.
+     */
+    void markDirty() {
+        dirty = true;
+    }
 
     void stop() {
         running = false;

@@ -23,6 +23,7 @@ void UDPSocket::unbind() {
     reactor.cancelWriting(sock);
     close(sock);
     sock = -1;
+    reactor.markDirty();
 }
 
 void UDPSocket::bind(uint16_t port) {
@@ -70,6 +71,8 @@ void UDPSocket::bind(uint16_t port) {
         ssize_t r = recvfrom(sock, &buffer[0], BUFFSIZE, MSG_DONTWAIT,
                              reinterpret_cast<sockaddr *>(&src_addr), &len);
         if (r < 0) {
+            if (errno == EWOULDBLOCK || errno == EAGAIN)
+                return;
             raise_errno("sock read");
             return;
         }
@@ -81,6 +84,8 @@ void UDPSocket::bind(uint16_t port) {
             receive_hook(src_addr, buffer);
         }
     });
+
+    reactor.markDirty();
 }
 
 void UDPSocket::registerWriter() {
@@ -119,6 +124,8 @@ void UDPSocket::registerToMulticastGroup(IpAddr addr) {
     if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &ip_mreq, sizeof(struct ip_mreq)) < 0) {
         raise_errno("setsockopt add_membership");
     }
+
+    reactor.markDirty();
 }
 
 void UDPSocket::unregisterFromMulticastGroup(IpAddr addr) {
@@ -128,6 +135,8 @@ void UDPSocket::unregisterFromMulticastGroup(IpAddr addr) {
     if (setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &ip_mreq, sizeof(struct ip_mreq)) < 0) {
         raise_errno("setsockopt drop_membership");
     }
+
+    reactor.markDirty();
 }
 
 void UDPSocket::send(SockAddr destination, const BytesBuffer &data, std::function<void()> callback) {

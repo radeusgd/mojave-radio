@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <regex>
+#include <utility>
 #include <utils/logging.h>
 #include "TelnetServer.h"
 
@@ -40,6 +41,8 @@ TelnetServer::TelnetServer(Reactor &reactor, uint16_t listen_port)
     reactor.setOnReadable(sock, [&reactor, this]() {
         int s = accept(sock, NULL, NULL);
         if (s == -1) {
+            if (errno == EWOULDBLOCK || errno == EAGAIN)
+                return;
             raise_errno("accept");
         }
         clientConnected(s);
@@ -66,10 +69,12 @@ void TelnetServer::clientConnected(int c_sock) {
         buff.resize(100); // TODO
         ssize_t r = recv(c_sock, &buff[0], buff.size(), MSG_DONTWAIT);
         if (r < 0) {
+            if (errno == EWOULDBLOCK || errno == EAGAIN)
+                return;
             raise_errno("tcp recv");
         }
 
-        if (r == 0) {
+        if (r == 0) { // EOF
             clientDisconnected(c_sock);
             return;
         }
@@ -171,6 +176,8 @@ void TelnetServer::send(int c_sock, const BytesBuffer& data) {
             BytesBuffer &b = client.queue.front();
             ssize_t sent = ::send(c_sock, &b[client.current_bytes_sent], b.size() - client.current_bytes_sent, MSG_DONTWAIT);
             if (sent < 0) {
+                if (errno == EWOULDBLOCK || errno == EAGAIN)
+                    return;
                 raise_errno("tcp send");
             }
             client.current_bytes_sent += sent;
@@ -203,9 +210,10 @@ TelnetServer::~TelnetServer() {
     }
     reactor.cancelReading(sock);
     close(sock);
+    reactor.markDirty();
 }
 
 void TelnetServer::setInputHandler(std::function<void(InputKey)> handler) {
-    input_handler = handler;
+    input_handler = std::move(handler);
 }
 

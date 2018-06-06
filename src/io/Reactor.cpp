@@ -54,6 +54,8 @@ void Reactor::runEvery(int ms, std::function<void()> action, RunEveryStartType s
 void Reactor::run() {
     running = true;
     while (running) {
+        dirty = false;
+
         std::vector<struct pollfd> polls;
         for (auto ev : events) {
             struct pollfd pfd{};
@@ -81,10 +83,12 @@ void Reactor::run() {
         }
 
         for (auto pfd : polls) {
-            if (pfd.revents & POLLIN) {
+            if (events[pfd.fd].in
+                && (pfd.revents & POLLIN || pfd.revents & POLLHUP)) {
+                // we call in on POLLHUP to get an empty read when closing a stream socket / pipe
                 events[pfd.fd].in();
             }
-            if (pfd.revents & POLLOUT) {
+            if (events[pfd.fd].out && pfd.revents & POLLOUT) {
                 events[pfd.fd].out();
             }
             if (pfd.revents & POLLERR) {
@@ -93,10 +97,8 @@ void Reactor::run() {
             if (pfd.revents & POLLNVAL) {
                 dbg << "Invalid request on " << pfd.fd << "!\n";
             }
-            if (pfd.revents & POLLHUP) { // for example a pipe, doesn't call itself ready to read on EOF but calls this
-                if (events[pfd.fd].in)
-                    events[pfd.fd].in();
-            }
+
+            if (dirty) break; // if we've been marked dirty, poll again
         }
     }
 }

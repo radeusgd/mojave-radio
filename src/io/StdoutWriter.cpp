@@ -21,6 +21,8 @@ void StdoutWriter::write(const BytesBuffer &data, std::function<void()> finished
         size_t to_write = buff.size() - written;
         ssize_t r = ::write(STDOUT, &buff[written], to_write);
         if (r < 0) {
+            if (errno == EWOULDBLOCK || errno == EAGAIN)
+                return;
             raise_errno("stdout write");
         }
 
@@ -32,4 +34,9 @@ void StdoutWriter::write(const BytesBuffer &data, std::function<void()> finished
             finished();
         }
     });
+}
+
+StdoutWriter::~StdoutWriter() {
+    reactor.cancelWriting(STDOUT);
+    reactor.markDirty();
 }

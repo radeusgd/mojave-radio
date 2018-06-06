@@ -17,6 +17,9 @@ Receiver::Receiver(Reactor& reactor,
       audio_sock(reactor),
       stdout_writer(reactor),
       ui_server(reactor, ui_port),
+      bsize(bsize),
+      rtime(rtime),
+      buffer(bsize),
       default_station_name(std::move(default_station_name))
 {
     prepareDiscovery(discover_addr, ctrl_port);
@@ -69,6 +72,7 @@ void Receiver::moveMenuChoice(std::function<Stations::iterator(const Stations&, 
             dbg << "Recovering...\n";
             stationListHasChanged();
         }
+
         auto new_station = mod(stations, it)->first;
         if (new_station != *current_station) {
             stopListening(*current_station);
@@ -166,6 +170,7 @@ void Receiver::startListening(Receiver::Station station) {
     dbg << "Starting listening to " << station.name << " @ " << station.addr << "\n";
     audio_sock.rebind(station.addr.port());
     audio_sock.registerToMulticastGroup(station.addr.ip());
+    session = std::nullopt;
 }
 
 void Receiver::stopListening(Receiver::Station station) {
@@ -174,7 +179,6 @@ void Receiver::stopListening(Receiver::Station station) {
 }
 
 void Receiver::prepareAudio() {
-    // TODO checking session_id and shit
     audio_sock.setOnReceived([this](SockAddr source, const BytesBuffer& data) {
         AudioPackage pkg = AudioPackage::unpack(data);
         handleIncomingPackage(std::move(pkg));
@@ -182,7 +186,59 @@ void Receiver::prepareAudio() {
 }
 
 void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
+    if (!current_station) return; // if not listening to anything, something strange happened so drop the package
+
+    if (session) {
+        // there's a session ongoing, verify correctness
+        if (pkg.session_id != session->id) {
+            return; // drop packets from different session
+        }
+        if (pkg.audio_data.size() != session->psize) {
+            dbg << "A packet has inconsistent PSIZE in the same session!\n";
+            dbg << "Session PSIZE = " << session->psize
+                << ", packet PSIZE = " << pkg.audio_data.size() << "\n";
+            return;
+        }
+    } else {
+        // start a new session
+        uint64_t psize = pkg.audio_data.size();
+        uint64_t pkg_id = pkg.first_byte_num / psize;
+        session = Session{
+            .id = pkg.session_id,
+            .psize = psize,
+            .byte0 = pkg.first_byte_num,
+            .byte_to_start_bursting = pkg.first_byte_num + 3 * bsize / 4,
+            .latest_received_pkg_id = pkg_id
+        };
+    }
+
+    uint64_t pkg_id = pkg.first_byte_num / session->psize;
+
+    buffer.insert(pkg_id, std::move(pkg.audio_data));
+
+    dbg << pkg_id << " " << session->latest_received_pkg_id << "\n";
+
+    if (pkg_id > session->latest_received_pkg_id) {
+        // new biggest pkg id, handle new REXMITs
+        std::set<uint64_t> rexmit_ids; // will rexmit byte numbers
+        for (auto i = session->latest_received_pkg_id; i < pkg_id; ++i) {
+            dbg << i << "\n";
+            if (buffer.canHave(i) && !buffer.has(i)) {
+                rexmit_ids.insert(i * session->psize);
+            }
+        }
+        session->latest_received_pkg_id = pkg_id;
+
+        if (!rexmit_ids.empty()) {
+            dbg << "Scheduling REXMIT of " << rexmit_ids.size() << " packets\n";
+            // TODO timeout with reschedule
+        }
+    }
+
+    // TODO if not bursting and byte_num >= byte to start bursting -> start
+
+    /*
     if (!stdout_writer.is_writing()) {
         stdout_writer.write(pkg.audio_data, [](){});
-    }
+    }*/
 }

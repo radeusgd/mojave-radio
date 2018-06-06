@@ -12,6 +12,7 @@
 #include <map>
 #include <net/TelnetServer.h>
 #include <io/StdoutWriter.h>
+#include <radio/IncomingAudioBuffer.h>
 #include "protocol.h"
 
 class Receiver {
@@ -53,6 +54,17 @@ private:
     using Stations = std::map<Station, chrono::point>;
     Stations stations; // mapping station to its last reply
     std::optional<Station> current_station = std::nullopt;
+    struct Session {
+        uint64_t id;
+        size_t psize;
+        uint64_t byte0;
+        uint64_t byte_to_start_bursting;
+        uint64_t latest_received_pkg_id; // used for REXMITs
+    };
+    std::optional<Session> session = std::nullopt;
+    uint64_t bsize;
+    int rtime;
+    IncomingAudioBuffer buffer;
 
     void prepareDiscovery(IpAddr discover_addr, uint16_t ctrl_port);
     void prepareMenu();

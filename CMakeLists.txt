@@ -24,7 +24,7 @@ set(SOURCES
         src/utils/logging.h src/utils/logging.cpp
         src/utils/string.h src/utils/string.cpp
         src/radio/Receiver.cpp src/radio/Receiver.h
-        src/radio/Transmitter.cpp src/radio/Transmitter.h src/io/StdoutWriter.cpp src/io/StdoutWriter.h src/utils/HollowBuffer.cpp src/utils/HollowBuffer.h)
+        src/radio/Transmitter.cpp src/radio/Transmitter.h src/io/StdoutWriter.cpp src/io/StdoutWriter.h src/radio/IncomingAudioBuffer.cpp src/radio/IncomingAudioBuffer.h)
 
 # add_executable(Playground src/radio/main.cpp ${SOURCES})
 

@@ -21,7 +21,7 @@ int main(int argc, const char *argv[]) {
         (",d", po::value<std::string>(&DISCOVER_ADDR_STR)->default_value("255.255.255.255"), "DISCOVER_ADDR")
         (",C", po::value<uint16_t>(&CTRL_PORT)->default_value(30000 + NR_ALBUMU_MOD), "CTRL_PORT")
         (",U", po::value<uint16_t>(&UI_PORT)->default_value(10000 + NR_ALBUMU_MOD), "UI_PORT")
-        (",f", po::value<size_t>(&BSIZE)->default_value(64 * 1024), "BSIZE")
+        (",b", po::value<size_t>(&BSIZE)->default_value(64 * 1024), "BSIZE")
         (",R", po::value<int>(&RTIME)->default_value(250), "RTIME")
         (",n", po::value<std::string>(&DEFAULT_STATION_NAME)->default_value(""), "DEFAULT_STATION_NAME");
 

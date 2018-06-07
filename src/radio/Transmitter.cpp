@@ -61,6 +61,7 @@ void Transmitter::prepareControl() {
                 dbg << "Malformed REXMIT: " << message << "\n";
                 return;
             }
+            dbg << message << "\n";
 
             dbg << "Retransmission request from " << source << "\n";
             std::string rexmit_list_s = regex_match_result[1];

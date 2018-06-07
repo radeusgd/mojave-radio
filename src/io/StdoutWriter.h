@@ -30,6 +30,7 @@ public:
         reactor.cancelWriting(STDOUT);
         buff.clear();
         written = 0;
+        reactor.markDirty();
     }
 
     ~StdoutWriter();

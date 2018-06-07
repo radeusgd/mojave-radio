@@ -73,7 +73,7 @@ public:
     bool has(PacketId id) const {
         if (!canHave(id)) return false; // if out of range, discard
         size_t ind = index(id);
-        if (ind >= data.size()) return false; // we could but dont' have this frame allocated
+        if (ind >= data.size()) return false; // we could but don't have this frame allocated
         return !data[ind].empty(); // empty BytesBuffer means we don't have that packet
     }
 

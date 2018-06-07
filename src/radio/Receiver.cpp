@@ -102,6 +102,7 @@ void Receiver::prepareMenu() {
        }
     });
     refreshMenu();
+    reactor.runEvery(100, [this]() { refreshMenu(); });
 }
 
 void Receiver::handleReplyFrom(Receiver::Station station) {
@@ -161,20 +162,21 @@ void Receiver::refreshMenu() {
         ss << s.first.name << "\n";
     }
     ss << bar << "\n";
+    ss << "\n\n" << buffer << "\n";
     ui_server.setWindowContents(ss.str());
 }
 
 void Receiver::startListening(Receiver::Station station) {
-    // TODO clear buffers etc.
+    resetSession();
     dbg << "Starting listening to " << station.name << " @ " << station.audio_mcast_addr << "\n";
     audio_sock.rebind(station.audio_mcast_addr.port());
     audio_sock.registerToMulticastGroup(station.audio_mcast_addr.ip());
-    resetSession();
 }
 
 void Receiver::stopListening(Receiver::Station station) {
     // don't know if do anything actually
     dbg << "Stopping listening to " << station.name << " @ " << station.audio_mcast_addr << "\n";
+    resetSession();
 }
 
 void Receiver::prepareAudio() {
@@ -214,15 +216,19 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
 
     uint64_t pkg_id = pkg.first_byte_num / session->psize;
 
+    //bool had = buffer.has(pkg_id);
     buffer.insert(pkg_id, std::move(pkg.audio_data));
+    if (!buffer.has(pkg_id)) {
+        dbg << "Packet " << pkg_id << " hasn't been added. Fb = " << buffer.firstPacketId() << "\n";
+    }
 
-    dbg << pkg_id << " " << session->latest_received_pkg_id << "\n";
+    //dbg << pkg_id << " " << session->latest_received_pkg_id << "\n";
 
     if (pkg_id > session->latest_received_pkg_id) {
         // new biggest pkg id, handle new REXMITs
         std::set<uint64_t> rexmit_ids; // will rexmit byte numbers
         for (auto i = session->latest_received_pkg_id + 1; i < pkg_id; ++i) {
-            dbg << i << "\n";
+            //dbg << i << "\n";
             if (buffer.canHave(i) && !buffer.has(i)) {
                 rexmit_ids.insert(i);
             }
@@ -230,7 +236,7 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
         session->latest_received_pkg_id = pkg_id;
 
         if (!rexmit_ids.empty()) {
-            dbg << "Scheduling REXMIT of " << rexmit_ids.size() << " packets\n";
+            //dbg << "Scheduling REXMIT of " << rexmit_ids.size() << " packets\n";
             scheduleRexmitRequest(rexmit_ids, session->id);
         }
     }
@@ -257,6 +263,7 @@ void Receiver::scheduleRexmitRequest(std::set<uint64_t> missing_ids, uint64_t se
 
         if (new_ids.empty()) return; // if nothing is left to rexmit, return
 
+        dbg << "Asking for REXMIT of " << new_ids.size() << " / " << missing_ids.size() << " packets\n";
         sendRexmitRequest(new_ids); // send the request
         scheduleRexmitRequest(new_ids, session_id); // schedule another try
     });
@@ -281,7 +288,7 @@ void Receiver::sendRexmitRequest(std::set<uint64_t> missing_ids) {
         ss << bytenum;
     }
 
-    dbg << "Sending " << ss.str() << " to " << current_station->rexmit_addr << "\n";
+    //dbg << "Sending " << ss.str() << " to " << current_station->rexmit_addr << "\n";
     discovery_sock.send(current_station->rexmit_addr, ss.str());
 }
 
@@ -290,6 +297,8 @@ void Receiver::writeToStdout() {
         dbg << "Session invalidated during writing! Shouldn't happen.\n";
         return;
     }
+
+    //dbg << buffer << "\n";
 
     if (stdout_writer.is_writing()) {
         // if something was still being written, cancel that
@@ -314,4 +323,5 @@ void Receiver::writeToStdout() {
 void Receiver::resetSession() {
     session = std::nullopt;
     buffer.reset();
+    stdout_writer.cancel();
 }

@@ -55,6 +55,11 @@ public:
 
     void runAt(chrono::point t, std::function<void()> action);
 
+    /*
+     * Executes action after the specified amount of milliseconds from now.
+     */
+    void runAfter(int ms, std::function<void()> action);
+
     enum class RunEveryStartType {
         START_NOW,
         DEFER

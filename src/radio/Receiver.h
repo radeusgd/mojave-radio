@@ -63,7 +63,7 @@ private:
     };
     std::optional<Session> session = std::nullopt;
     uint64_t bsize;
-    int rtime;
+    int rexmit_time;
     IncomingAudioBuffer buffer;
 
     void prepareDiscovery(IpAddr discover_addr, uint16_t ctrl_port);
@@ -79,6 +79,9 @@ private:
     void startListening(Station station);
     void stopListening(Station station);
     void handleIncomingPackage(AudioPackage&& pkg);
+
+    void scheduleRexmitRequest(std::set<uint64_t> missing_ids, uint64_t session_id);
+    void sendRexmitRequest(std::set<uint64_t> missing_ids);
 public:
     Receiver(Reactor& reactor,
              IpAddr discover_addr, uint16_t ctrl_port, uint16_t ui_port,

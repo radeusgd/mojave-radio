@@ -18,7 +18,7 @@ Receiver::Receiver(Reactor& reactor,
       stdout_writer(reactor),
       ui_server(reactor, ui_port),
       bsize(bsize),
-      rtime(rtime),
+      rexmit_time(rtime),
       buffer(bsize),
       default_station_name(std::move(default_station_name))
 {
@@ -107,11 +107,10 @@ void Receiver::prepareMenu() {
 void Receiver::handleReplyFrom(Receiver::Station station) {
     dbg << "Discovered " << station.name << " @ " << station.addr << "\n";
     auto now = chrono::now();
-    chrono::duration dt = std::chrono::milliseconds(DISCOVER_TIMEOUT);
     stations.insert_or_assign(station, now); // set that the station has been heard from recently
     stationListHasChanged();
 
-    reactor.runAt(now + dt, [this, station]() {
+    reactor.runAfter(DISCOVER_TIMEOUT, [this, station]() {
         auto it = stations.find(station);
         if (it == stations.end()) return; // station already removed
 
@@ -224,14 +223,14 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
         for (auto i = session->latest_received_pkg_id; i < pkg_id; ++i) {
             dbg << i << "\n";
             if (buffer.canHave(i) && !buffer.has(i)) {
-                rexmit_ids.insert(i * session->psize);
+                rexmit_ids.insert(i);
             }
         }
         session->latest_received_pkg_id = pkg_id;
 
         if (!rexmit_ids.empty()) {
             dbg << "Scheduling REXMIT of " << rexmit_ids.size() << " packets\n";
-            // TODO timeout with reschedule
+            scheduleRexmitRequest(rexmit_ids, session->id);
         }
     }
 
@@ -241,4 +240,41 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
     if (!stdout_writer.is_writing()) {
         stdout_writer.write(pkg.audio_data, [](){});
     }*/
+}
+
+void Receiver::scheduleRexmitRequest(std::set<uint64_t> missing_ids, uint64_t session_id) {
+    reactor.runAfter(rexmit_time, [this, missing_ids, session_id]() {
+        if (!session || session_id != session->id) return; // if we changed the session all rexmits are to be cancelled
+
+        std::remove_if(missing_ids.begin(), missing_ids.end(), [this](uint64_t id) {
+           return !buffer.canHave(id) || buffer.has(id); // if we have the packet or it's out of buffer range, we drop it
+        });
+
+        if (missing_ids.empty()) return; // if nothing is left to rexmit, return
+
+        sendRexmitRequest(missing_ids); // send the request
+        scheduleRexmitRequest(missing_ids, session_id); // schedule another try
+    });
+}
+
+void Receiver::sendRexmitRequest(std::set<uint64_t> missing_ids) {
+    assert(!missing_ids.empty());
+    assert(session);
+
+    std::stringstream ss;
+    ss << REXMIT << " ";
+    bool first = true;
+    for (auto id : missing_ids) {
+        if (first) {
+            first = false;
+        } else {
+            ss << ",";
+        }
+
+        uint64_t bytenum = id * session->psize;
+        ss << bytenum;
+    }
+
+    // TODO addr
+    //discovery_sock.send()
 }

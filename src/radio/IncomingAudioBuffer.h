@@ -10,9 +10,11 @@
 #include <optional>
 #include <cassert>
 #include <deque>
+#include <ostream>
 #include "io/io.h"
 
 class IncomingAudioBuffer {
+    friend std::ostream& operator<<(std::ostream& out, const IncomingAudioBuffer& buff);
 public:
     using PacketId = size_t;
 private:
@@ -51,6 +53,11 @@ private:
 public:
     explicit IncomingAudioBuffer(size_t max_size) : max_size(max_size) {}
 
+    PacketId firstPacketId() const {
+        assert(state);
+        return state->first_id;
+    }
+
     /*
      * Checks if given packet is in the range of what the buffer can contain.
      */
@@ -71,7 +78,6 @@ public:
     }
 
     void insert(PacketId id, BytesBuffer&& packet) {
-        if (id < state->first_id) return; // discard too old
         if (!state) {
             state = State{
                 .psize = packet.size(),
@@ -79,8 +85,18 @@ public:
             };
         }
 
+        if (id < state->first_id) return; // discard too old
+
+        if (has(id))
+            return; // no need to add already present packet
+
         allocateUpTo(id);
         data[index(id)] = std::move(packet);
+    }
+
+    const BytesBuffer& get(PacketId id) {
+        assert (has(id));
+        return data[index(id)];
     }
 
     void reset() {
@@ -89,5 +105,21 @@ public:
     };
 };
 
+// used for debugging
+inline std::ostream& operator<<(std::ostream& out, const IncomingAudioBuffer& buff) {
+    if (buff.data.empty()) {
+        out << "empty_buffer";
+    }
+
+    for (const auto &i : buff.data) {
+        if (i.empty()) {
+            out << "_";
+        } else {
+            out << "#";
+        }
+    }
+
+    return out;
+}
 
 #endif //MOJAVE_RADIO_HOLLOWBUFFER_H

@@ -42,11 +42,11 @@ void Receiver::prepareDiscovery(IpAddr discover_addr, uint16_t ctrl_port) {
                 if (port_i < 0 || port_i > MAX_PORT_NUMBER) throw std::runtime_error("port out of range");
                 auto port = static_cast<uint16_t>(port_i);
 
-                Station station;
-                station.name = smatch[3];
-                station.addr = SockAddr(ip, port);
-
-                handleReplyFrom(station);
+                handleReplyFrom(Station{
+                        .name = smatch[3],
+                        .audio_mcast_addr = SockAddr(ip, port),
+                        .rexmit_addr = source
+                });
             } catch (std::runtime_error& e) {
                 dbg << "Error parsing response " << e.what() << " in " << message << "\n";
             }
@@ -68,7 +68,7 @@ void Receiver::moveMenuChoice(std::function<Stations::iterator(const Stations&, 
         if (it == stations.end()) {
             dbg << "\n\n\nTHIS SHOULDN'T HAPPEN!!!\n";
             dbg << __FILE__ << ":" << __LINE__ << "\n";
-            dbg << current_station->name << ", " << current_station->addr << "\n";
+            dbg << current_station->name << ", " << current_station->audio_mcast_addr << "\n";
             dbg << "Recovering...\n";
             stationListHasChanged();
         }
@@ -105,7 +105,7 @@ void Receiver::prepareMenu() {
 }
 
 void Receiver::handleReplyFrom(Receiver::Station station) {
-    dbg << "Discovered " << station.name << " @ " << station.addr << "\n";
+    dbg << "Discovered " << station.name << " @ " << station.audio_mcast_addr << "\n";
     auto now = chrono::now();
     stations.insert_or_assign(station, now); // set that the station has been heard from recently
     stationListHasChanged();
@@ -166,15 +166,15 @@ void Receiver::refreshMenu() {
 
 void Receiver::startListening(Receiver::Station station) {
     // TODO clear buffers etc.
-    dbg << "Starting listening to " << station.name << " @ " << station.addr << "\n";
-    audio_sock.rebind(station.addr.port());
-    audio_sock.registerToMulticastGroup(station.addr.ip());
-    session = std::nullopt;
+    dbg << "Starting listening to " << station.name << " @ " << station.audio_mcast_addr << "\n";
+    audio_sock.rebind(station.audio_mcast_addr.port());
+    audio_sock.registerToMulticastGroup(station.audio_mcast_addr.ip());
+    resetSession();
 }
 
 void Receiver::stopListening(Receiver::Station station) {
     // don't know if do anything actually
-    dbg << "Stopping listening to " << station.name << " @ " << station.addr << "\n";
+    dbg << "Stopping listening to " << station.name << " @ " << station.audio_mcast_addr << "\n";
 }
 
 void Receiver::prepareAudio() {
@@ -207,7 +207,8 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
             .psize = psize,
             .byte0 = pkg.first_byte_num,
             .byte_to_start_bursting = pkg.first_byte_num + 3 * bsize / 4,
-            .latest_received_pkg_id = pkg_id
+            .latest_received_pkg_id = pkg_id,
+            .bursting_pkg_id = std::nullopt
         };
     }
 
@@ -220,7 +221,7 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
     if (pkg_id > session->latest_received_pkg_id) {
         // new biggest pkg id, handle new REXMITs
         std::set<uint64_t> rexmit_ids; // will rexmit byte numbers
-        for (auto i = session->latest_received_pkg_id; i < pkg_id; ++i) {
+        for (auto i = session->latest_received_pkg_id + 1; i < pkg_id; ++i) {
             dbg << i << "\n";
             if (buffer.canHave(i) && !buffer.has(i)) {
                 rexmit_ids.insert(i);
@@ -234,32 +235,37 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
         }
     }
 
-    // TODO if not bursting and byte_num >= byte to start bursting -> start
-
-    /*
-    if (!stdout_writer.is_writing()) {
-        stdout_writer.write(pkg.audio_data, [](){});
-    }*/
+    if (!session->bursting_pkg_id && pkg.first_byte_num >= session->byte_to_start_bursting) {
+        // if current byte is BYTE0 + floor(BSIZE*3/4) and we're not yet playing, start playing
+        dbg << buffer << std::endl;
+        session->bursting_pkg_id = buffer.firstPacketId();
+        writeToStdout();
+    }
 }
 
 void Receiver::scheduleRexmitRequest(std::set<uint64_t> missing_ids, uint64_t session_id) {
     reactor.runAfter(rexmit_time, [this, missing_ids, session_id]() {
         if (!session || session_id != session->id) return; // if we changed the session all rexmits are to be cancelled
 
-        std::remove_if(missing_ids.begin(), missing_ids.end(), [this](uint64_t id) {
-           return !buffer.canHave(id) || buffer.has(id); // if we have the packet or it's out of buffer range, we drop it
-        });
+        std::set<uint64_t> new_ids;
+        for (auto x : missing_ids) {
+            // check if the packet is still wanted
+            if (buffer.canHave(x) && !buffer.has(x)) {
+                new_ids.insert(x);
+            }
+        }
 
-        if (missing_ids.empty()) return; // if nothing is left to rexmit, return
+        if (new_ids.empty()) return; // if nothing is left to rexmit, return
 
-        sendRexmitRequest(missing_ids); // send the request
-        scheduleRexmitRequest(missing_ids, session_id); // schedule another try
+        sendRexmitRequest(new_ids); // send the request
+        scheduleRexmitRequest(new_ids, session_id); // schedule another try
     });
 }
 
 void Receiver::sendRexmitRequest(std::set<uint64_t> missing_ids) {
     assert(!missing_ids.empty());
     assert(session);
+    assert(current_station);
 
     std::stringstream ss;
     ss << REXMIT << " ";
@@ -275,6 +281,37 @@ void Receiver::sendRexmitRequest(std::set<uint64_t> missing_ids) {
         ss << bytenum;
     }
 
-    // TODO addr
-    //discovery_sock.send()
+    dbg << "Sending " << ss.str() << " to " << current_station->rexmit_addr << "\n";
+    discovery_sock.send(current_station->rexmit_addr, ss.str());
+}
+
+void Receiver::writeToStdout() {
+    if (!session || !session->bursting_pkg_id) {
+        dbg << "Session invalidated during writing! Shouldn't happen.\n";
+        return;
+    }
+
+    if (stdout_writer.is_writing()) {
+        // if something was still being written, cancel that
+        // this is unlikely to happen, but may happen when switching channels
+        stdout_writer.cancel();
+    }
+
+    auto current_pkg = *session->bursting_pkg_id;
+
+    if (!buffer.has(current_pkg)) {
+        dbg << "Packet " << current_pkg << " is missing! Restarting listening...\n";
+        resetSession(); // ditch current buffer and session
+        return;
+    }
+
+    stdout_writer.write(buffer.get(current_pkg), [this]() {
+        session->bursting_pkg_id = *session->bursting_pkg_id + 1; // switch to next packet
+        writeToStdout();
+    });
+}
+
+void Receiver::resetSession() {
+    session = std::nullopt;
+    buffer.reset();
 }

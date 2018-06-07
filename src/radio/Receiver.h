@@ -29,21 +29,23 @@ private:
 
     struct Station {
         std::string name;
-        SockAddr addr;
+        SockAddr audio_mcast_addr;
+        SockAddr rexmit_addr;
 
         // sorting Stations lexicographically by name
         // for equal names, there's an arbitrary strict ordering
         bool operator<(const Station& o) const {
             if (name != o.name)
                 return name < o.name;
-            if (addr.port() != o.addr.port())
-                return addr.port() != o.addr.port();
-            return addr.ip().to_string() < o.addr.ip().to_string();
+            if (audio_mcast_addr != o.audio_mcast_addr)
+                return audio_mcast_addr < o.audio_mcast_addr;
+            return rexmit_addr < o.rexmit_addr;
         }
 
         bool operator==(const Station& o) const {
             return name == o.name
-                   && addr == o.addr;
+                   && audio_mcast_addr == o.audio_mcast_addr
+                   && rexmit_addr == o.rexmit_addr;
         }
 
         bool operator!=(const Station& o) const {
@@ -58,13 +60,18 @@ private:
         uint64_t id;
         size_t psize;
         uint64_t byte0;
+
         uint64_t byte_to_start_bursting;
         uint64_t latest_received_pkg_id; // used for REXMITs
+
+        std::optional<uint64_t> bursting_pkg_id;
     };
     std::optional<Session> session = std::nullopt;
     uint64_t bsize;
     int rexmit_time;
     IncomingAudioBuffer buffer;
+
+    void resetSession();
 
     void prepareDiscovery(IpAddr discover_addr, uint16_t ctrl_port);
     void prepareMenu();
@@ -79,6 +86,8 @@ private:
     void startListening(Station station);
     void stopListening(Station station);
     void handleIncomingPackage(AudioPackage&& pkg);
+
+    void writeToStdout();
 
     void scheduleRexmitRequest(std::set<uint64_t> missing_ids, uint64_t session_id);
     void sendRexmitRequest(std::set<uint64_t> missing_ids);

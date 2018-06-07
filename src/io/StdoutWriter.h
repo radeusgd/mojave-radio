@@ -26,6 +26,12 @@ public:
         return !buff.empty();
     }
 
+    void cancel() {
+        reactor.cancelWriting(STDOUT);
+        buff.clear();
+        written = 0;
+    }
+
     ~StdoutWriter();
 };
 

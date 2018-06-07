@@ -48,6 +48,16 @@ public:
     bool operator==(const SockAddr& o) const {
         return ip() == o.ip() && port() == o.port();
     }
+
+    bool operator!=(const SockAddr& o) const {
+        return !(*this == o);
+    }
+
+    bool operator<(const SockAddr& o) const {
+        if (port() != o.port())
+            return port() != o.port();
+        return ip().to_string() < o.ip().to_string();
+    }
 };
 
 inline std::ostream& operator<<(std::ostream& os, IpAddr ip) {

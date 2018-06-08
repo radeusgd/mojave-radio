@@ -21,7 +21,7 @@ Transmitter::Transmitter(Reactor &reactor,
       fifo(fsize / psize),
       broadcast_destination(SockAddr(multicast_addr, data_port)),
       ctrl_sock(reactor, ctrl_port),
-      data_sock(reactor, data_port)
+      data_sock(reactor)
 {
     // we are not listening on data_port
     data_sock.setOnReceived([](SockAddr source, const BytesBuffer& data) {});

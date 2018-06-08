@@ -102,7 +102,10 @@ void Receiver::prepareMenu() {
        }
     });
     refreshMenu();
+
+#ifdef DEBUG_OVER_TELNET
     reactor.runEvery(100, [this]() { refreshMenu(); });
+#endif
 }
 
 void Receiver::handleReplyFrom(Receiver::Station station) {
@@ -162,7 +165,11 @@ void Receiver::refreshMenu() {
         ss << s.first.name << "\n";
     }
     ss << bar << "\n";
+
+#ifdef DEBUG_OVER_TELNET
     ss << "\n\n" << buffer << "\n";
+#endif
+
     ui_server.setWindowContents(ss.str());
 }
 
@@ -219,16 +226,13 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
     //bool had = buffer.has(pkg_id);
     buffer.insert(pkg_id, std::move(pkg.audio_data));
     if (!buffer.has(pkg_id)) {
-        dbg << "Packet " << pkg_id << " hasn't been added. Fb = " << buffer.firstPacketId() << "\n";
+        dbg << "Packet " << pkg_id << " hasn't been added. Oldest packet in buffer = " << buffer.firstPacketId() << "\n";
     }
-
-    //dbg << pkg_id << " " << session->latest_received_pkg_id << "\n";
 
     if (pkg_id > session->latest_received_pkg_id) {
         // new biggest pkg id, handle new REXMITs
         std::set<uint64_t> rexmit_ids; // will rexmit byte numbers
         for (auto i = session->latest_received_pkg_id + 1; i < pkg_id; ++i) {
-            //dbg << i << "\n";
             if (buffer.canHave(i) && !buffer.has(i)) {
                 rexmit_ids.insert(i);
             }
@@ -236,14 +240,12 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
         session->latest_received_pkg_id = pkg_id;
 
         if (!rexmit_ids.empty()) {
-            //dbg << "Scheduling REXMIT of " << rexmit_ids.size() << " packets\n";
             scheduleRexmitRequest(rexmit_ids, session->id);
         }
     }
 
     if (!session->bursting_pkg_id && pkg.first_byte_num >= session->byte_to_start_bursting) {
         // if current byte is BYTE0 + floor(BSIZE*3/4) and we're not yet playing, start playing
-        dbg << buffer << std::endl;
         session->bursting_pkg_id = buffer.firstPacketId();
         writeToStdout();
     }
@@ -297,8 +299,6 @@ void Receiver::writeToStdout() {
         dbg << "Session invalidated during writing! Shouldn't happen.\n";
         return;
     }
-
-    //dbg << buffer << "\n";
 
     if (stdout_writer.is_writing()) {
         // if something was still being written, cancel that

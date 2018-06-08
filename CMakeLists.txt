@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(src)
 
+set(CMAKE_CXX_FLAGS "-Wall -O2")
 add_definitions(-DDEBUG)
 
 set(SOURCES
@@ -25,17 +26,13 @@ set(SOURCES
         src/radio/Receiver.cpp src/radio/Receiver.h
         src/radio/Transmitter.cpp src/radio/Transmitter.h src/io/StdoutWriter.cpp src/io/StdoutWriter.h src/radio/IncomingAudioBuffer.cpp src/radio/IncomingAudioBuffer.h)
 
-# add_executable(Playground src/radio/main.cpp ${SOURCES})
-
 add_executable(odbiornik
         ${SOURCES} src/radio/odbiornik_main.cpp)
 
 add_executable(nadajnik
         ${SOURCES} src/radio/nadajnik_main.cpp)
 
-set(LIBRARIES
-        boost_program_options)
+set(LIBRARIES boost_program_options)
 
-#TARGET_LINK_LIBRARIES(Playground LINK_PUBLIC ${LIBRARIES})
-TARGET_LINK_LIBRARIES(odbiornik LINK_PUBLIC ${LIBRARIES})
-TARGET_LINK_LIBRARIES(nadajnik LINK_PUBLIC ${LIBRARIES})
+TARGET_LINK_LIBRARIES(odbiornik ${LIBRARIES})
+TARGET_LINK_LIBRARIES(nadajnik ${LIBRARIES})

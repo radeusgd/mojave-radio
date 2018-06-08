@@ -210,7 +210,6 @@ TelnetServer::~TelnetServer() {
     }
     reactor.cancelReading(sock);
     close(sock);
-    reactor.markDirty();
 }
 
 void TelnetServer::setInputHandler(std::function<void(InputKey)> handler) {

@@ -38,5 +38,4 @@ void StdoutWriter::write(const BytesBuffer &data, std::function<void()> finished
 
 StdoutWriter::~StdoutWriter() {
     reactor.cancelWriting(STDOUT);
-    reactor.markDirty();
 }

@@ -26,11 +26,13 @@ void Reactor::setOnWriteable(int fd, std::function<void()> writeable) {
 void Reactor::cancelReading(int fd) {
     events[fd].in = nullptr;
     cleanIfEmpty(fd);
+    markDirty();
 }
 
 void Reactor::cancelWriting(int fd) {
     events[fd].out = nullptr;
     cleanIfEmpty(fd);
+    markDirty();
 }
 
 void Reactor::runAt(chrono::point t, std::function<void()> action) {
@@ -70,6 +72,10 @@ void Reactor::run() {
             if (ev.second.out) {
                 pfd.events |= POLLOUT;
             }
+            if (pfd.events == 0) {
+                dbg << pfd.fd << " has no events, should be deleted\n";
+                continue;
+            }
             polls.push_back(pfd);
         }
 
@@ -86,13 +92,15 @@ void Reactor::run() {
         }
 
         for (auto pfd : polls) {
-            if (events[pfd.fd].in
-                && (pfd.revents & POLLIN || pfd.revents & POLLHUP)) {
+            if ((pfd.revents & POLLIN || pfd.revents & POLLHUP)
+                && events[pfd.fd].in) {
                 // we call in on POLLHUP to get an empty read when closing a stream socket / pipe
                 events[pfd.fd].in();
+                if (dirty) break; // if we've been marked dirty, poll again
             }
-            if (events[pfd.fd].out && pfd.revents & POLLOUT) {
+            if (pfd.revents & POLLOUT && events[pfd.fd].out) {
                 events[pfd.fd].out();
+                if (dirty) break; // if we've been marked dirty, poll again
             }
             if (pfd.revents & POLLERR) {
                 dbg << "Some error happened on " << pfd.fd << "\n";
@@ -100,8 +108,6 @@ void Reactor::run() {
             if (pfd.revents & POLLNVAL) {
                 dbg << "Invalid request on " << pfd.fd << "!\n";
             }
-
-            if (dirty) break; // if we've been marked dirty, poll again
         }
     }
 }

@@ -23,7 +23,6 @@ void UDPSocket::unbind() {
     reactor.cancelWriting(sock);
     close(sock);
     sock = -1;
-    reactor.markDirty();
 }
 
 void UDPSocket::bind(uint16_t port) {

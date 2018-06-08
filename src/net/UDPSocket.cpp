@@ -91,7 +91,7 @@ void UDPSocket::registerWriter() {
     reactor.setOnWriteable(sock, [this]() {
         assert (!send_queue.empty());
         PendingMessage &pm = send_queue.front();
-        auto r = sendto(sock, &pm.data[0], pm.data.size(),
+        ssize_t r = sendto(sock, &pm.data[0], pm.data.size(),
                         0, reinterpret_cast<const sockaddr *>(&pm.destination),
                         sizeof(pm.destination));
         if (r == 0)
@@ -101,7 +101,8 @@ void UDPSocket::registerWriter() {
                 return;
             raise_errno("write"); // TODO? EAGAIN?
         }
-        if (r != pm.data.size()) {
+
+        if (static_cast<size_t >(r) != pm.data.size()) {
             throw std::runtime_error("Partial datagram write?");
         }
 

@@ -42,8 +42,8 @@ public:
      * Returns whether the ith added element is present in the buffer.
      */
     bool has(size_t i) const {
-        auto p = posInBuffer(i);
-        return 0 <= p && p < buffer.size();
+        ssize_t p = posInBuffer(i);
+        return 0 <= p && static_cast<size_t >(p) < buffer.size();
     }
 
     /*

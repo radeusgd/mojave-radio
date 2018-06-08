@@ -17,10 +17,10 @@ Receiver::Receiver(Reactor& reactor,
       audio_sock(reactor),
       stdout_writer(reactor),
       ui_server(reactor, ui_port),
+      default_station_name(std::move(default_station_name)),
       bsize(bsize),
       rexmit_time(rtime),
-      buffer(bsize),
-      default_station_name(std::move(default_station_name))
+      buffer(bsize)
 {
     prepareDiscovery(discover_addr, ctrl_port);
     prepareMenu();

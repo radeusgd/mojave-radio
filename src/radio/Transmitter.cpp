@@ -17,11 +17,11 @@ Transmitter::Transmitter(Reactor &reactor,
                          size_t psize, size_t fsize, int rtime,
                          const std::string &name)
     : reactor(reactor),
-      psize(psize),
-      fifo(fsize / psize),
-      broadcast_destination(SockAddr(multicast_addr, data_port)),
       ctrl_sock(reactor, ctrl_port),
-      data_sock(reactor)
+      data_sock(reactor),
+      broadcast_destination(SockAddr(multicast_addr, data_port)),
+      psize(psize),
+      fifo(fsize / psize)
 {
     // we are not listening on data_port
     data_sock.setOnReceived([](SockAddr source, const BytesBuffer& data) {});

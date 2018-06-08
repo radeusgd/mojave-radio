@@ -7,6 +7,7 @@
 #include <poll.h>
 #include "utils/logging.h"
 #include "utils/functional.h"
+#include "utils/errors.h"
 
 void Reactor::cleanIfEmpty(int fd) {
     auto wf = events.find(fd);
@@ -72,8 +73,9 @@ void Reactor::run() {
             if (ev.second.out) {
                 pfd.events |= POLLOUT;
             }
+
             if (pfd.events == 0) {
-                dbg << pfd.fd << " has no events, should be deleted\n";
+                dbg << pfd.fd << " has no events, should have been deleted\n";
                 continue;
             }
             polls.push_back(pfd);
@@ -85,6 +87,10 @@ void Reactor::run() {
         }
 
         int r = poll(&polls[0], polls.size(), timeout());
+        if (r < 0) {
+            raise_errno("poll");
+        }
+
         while (running && hasPendingTimers()) { // while there are pending timers
             auto t = *timers.begin();
             timers.erase(timers.begin());

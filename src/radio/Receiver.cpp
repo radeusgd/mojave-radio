@@ -3,10 +3,10 @@
 //
 
 #include "utils/string.h"
-#include <utility>
-#include <utils/functional.h>
+#include "utils/functional.h"
 #include "Receiver.h"
 #include "protocol.h"
+#include <utility>
 
 Receiver::Receiver(Reactor& reactor,
                    IpAddr discover_addr, uint16_t ctrl_port, uint16_t ui_port,
@@ -223,7 +223,6 @@ void Receiver::handleIncomingPackage(AudioPackage &&pkg) {
 
     uint64_t pkg_id = pkg.first_byte_num / session->psize;
 
-    //bool had = buffer.has(pkg_id);
     buffer.insert(pkg_id, std::move(pkg.audio_data));
     if (!buffer.has(pkg_id)) {
         dbg << "Packet " << pkg_id << " hasn't been added. Oldest packet in buffer = " << buffer.firstPacketId() << "\n";

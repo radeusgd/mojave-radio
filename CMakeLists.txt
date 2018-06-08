@@ -11,7 +11,6 @@ set(SOURCES
         src/io/Reactor.cpp src/io/Reactor.h
         src/utils/chrono.h
         src/utils/functional.h
-        src/io/StdinReader.cpp src/io/StdinReader.h
         src/io/io.h
         src/net/TelnetServer.cpp src/net/TelnetServer.h
         src/net/UDPSocket.cpp src/net/UDPSocket.h

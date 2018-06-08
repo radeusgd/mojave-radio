@@ -1,4 +1,5 @@
-#include "radio/protocol.h"
+#include "protocol.h"
+
 #include <endian.h>
 #include <cstring>
 

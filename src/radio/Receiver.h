@@ -5,15 +5,14 @@
 #ifndef MOJAVE_RADIO_RECEIVER_H
 #define MOJAVE_RADIO_RECEIVER_H
 
-
-#include <net/net.h>
-#include <io/Reactor.h>
-#include <net/TextUDPSocket.h>
-#include <map>
-#include <net/TelnetServer.h>
-#include <io/StdoutWriter.h>
-#include <radio/IncomingAudioBuffer.h>
+#include "net/net.h"
+#include "io/Reactor.h"
+#include "net/TextUDPSocket.h"
+#include "net/TelnetServer.h"
+#include "io/StdoutWriter.h"
+#include "IncomingAudioBuffer.h"
 #include "protocol.h"
+#include <map>
 
 class Receiver {
 private:

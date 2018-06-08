@@ -7,8 +7,8 @@
 
 
 #include "UDPSocket.h"
+#include "utils/logging.h"
 #include <utility>
-#include <utils/logging.h>
 
 class TextUDPSocket {
 public:
@@ -23,7 +23,7 @@ private:
     UDPSocket underlying;
     OnReceive receive_hook;
 public:
-    TextUDPSocket(Reactor &reactor, uint16_t port = 0)
+    explicit TextUDPSocket(Reactor &reactor, uint16_t port = 0)
         : underlying(reactor, port) {
         underlying.setOnReceived([this](SockAddr source, const BytesBuffer &data) {
             if (data.empty() || data.back() != '\n') {

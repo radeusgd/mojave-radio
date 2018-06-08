@@ -3,10 +3,10 @@
 //
 
 #include "UDPSocket.h"
+#include "utils/errors.h"
 
 #include <unistd.h>
 #include <utility>
-#include "utils/errors.h"
 #include <sys/ioctl.h>
 
 static constexpr size_t BUFFSIZE = 64 * 1024 + 1;

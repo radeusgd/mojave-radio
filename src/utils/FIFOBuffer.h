@@ -5,9 +5,8 @@
 #ifndef MOJAVE_RADIO_FIFOBUFFER_H
 #define MOJAVE_RADIO_FIFOBUFFER_H
 
-
+#include "io/io.h"
 #include <deque>
-#include <io/io.h>
 #include <cassert>
 #include <stdexcept>
 

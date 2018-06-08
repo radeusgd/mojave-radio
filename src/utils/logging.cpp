@@ -3,6 +3,7 @@
 //
 
 #include "utils/logging.h"
+
 #ifndef DEBUG
 NoOpStream dbg;
 #endif

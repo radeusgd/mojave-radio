@@ -5,13 +5,12 @@
 #ifndef MOJAVE_RADIO_HOLLOWBUFFER_H
 #define MOJAVE_RADIO_HOLLOWBUFFER_H
 
-
+#include "io/io.h"
 #include <cstddef>
 #include <optional>
 #include <cassert>
 #include <deque>
 #include <ostream>
-#include "io/io.h"
 
 class IncomingAudioBuffer {
     friend std::ostream& operator<<(std::ostream& out, const IncomingAudioBuffer& buff);

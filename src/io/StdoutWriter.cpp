@@ -3,8 +3,8 @@
 //
 
 #include "StdoutWriter.h"
+#include "utils/errors.h"
 #include <unistd.h>
-#include <utils/errors.h>
 
 StdoutWriter::StdoutWriter(Reactor &reactor)
     : reactor(reactor) {

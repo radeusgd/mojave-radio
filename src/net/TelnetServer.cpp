@@ -2,14 +2,14 @@
 // Created by radeusgd on 28.05.18.
 //
 
+#include "TelnetServer.h"
+#include "utils/logging.h"
 #include <sys/socket.h>
 #include <utils/errors.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <regex>
 #include <utility>
-#include <utils/logging.h>
-#include "TelnetServer.h"
 
 static const std::string CLEAR_SCREEN = "\u001B[2J";
 static const std::string MOVE_HOME = "\u001B[H";

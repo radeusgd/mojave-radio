@@ -4,9 +4,9 @@
 
 #include "utils/errors.h"
 #include "Transmitter.h"
+#include "utils/string.h"
+#include "utils/functional.h"
 #include <unistd.h>
-#include <utils/string.h>
-#include <utils/functional.h>
 
 void Transmitter::sendReply(SockAddr destination) {
     ctrl_sock.send(destination, LOOKUP_REPLY);
@@ -36,7 +36,7 @@ Transmitter::Transmitter(Reactor &reactor,
     time_t now = time(NULL);
     session_id = static_cast<uint64_t>(now);
 
-    ctrl_sock.registerToMulticastGroup(multicast_addr);
+    //ctrl_sock.registerToMulticastGroup(multicast_addr); // TODO maybe no need to register to mcast?
     prepareControl();
     prepareStdin();
     prepareRetransmissions(rtime);

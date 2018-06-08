@@ -5,15 +5,13 @@
 #ifndef MOJAVE_RADIO_NADAJNIK_H
 #define MOJAVE_RADIO_NADAJNIK_H
 
-
-#include <io/Reactor.h>
-#include <net/UDPSocket.h>
-#include <net/TextUDPSocket.h>
-#include <utils/logging.h>
-#include <sstream>
-#include <io/StdinReader.h>
-#include <utils/FIFOBuffer.h>
+#include "io/Reactor.h"
+#include "net/UDPSocket.h"
+#include "net/TextUDPSocket.h"
+#include "utils/logging.h"
+#include "utils/FIFOBuffer.h"
 #include "protocol.h"
+#include <sstream>
 
 class Transmitter {
 private:

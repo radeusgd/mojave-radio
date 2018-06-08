@@ -5,8 +5,8 @@
 #ifndef MOJAVE_RADIO_PROTOCOL_H
 #define MOJAVE_RADIO_PROTOCOL_H
 
+#include "io/io.h"
 #include <cstdint>
-#include <io/io.h>
 #include <regex>
 
 extern const char* LOOKUP;

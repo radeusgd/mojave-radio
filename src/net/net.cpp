@@ -2,7 +2,7 @@
 // Created by radeusgd on 31.05.18.
 //
 
-#include "net/net.h"
+#include "net.h"
 
 #include <stdexcept>
 #include <arpa/inet.h>

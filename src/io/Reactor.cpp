@@ -101,11 +101,15 @@ void Reactor::run() {
             if ((pfd.revents & POLLIN || pfd.revents & POLLHUP)
                 && events[pfd.fd].in) {
                 // we call in on POLLHUP to get an empty read when closing a stream socket / pipe
-                events[pfd.fd].in();
+                // we make a copy of std::function, because it may call cancel* which destroys the function while it's running
+                // and that could be unpleasant
+                auto copy_f = events[pfd.fd].in;
+                copy_f();
                 if (dirty) break; // if we've been marked dirty, poll again
             }
             if (pfd.revents & POLLOUT && events[pfd.fd].out) {
-                events[pfd.fd].out();
+                auto copy_f = events[pfd.fd].out;
+                copy_f();
                 if (dirty) break; // if we've been marked dirty, poll again
             }
             if (pfd.revents & POLLERR) {

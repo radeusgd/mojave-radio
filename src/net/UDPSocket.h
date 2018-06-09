@@ -28,6 +28,7 @@ private:
     std::deque<PendingMessage> send_queue;
     void unbind(); // unbind discards all messages that haven't been sent
     void bind(uint16_t port);
+    uint16_t current_port;
 
     Reactor& reactor;
     OnReceive receive_hook;

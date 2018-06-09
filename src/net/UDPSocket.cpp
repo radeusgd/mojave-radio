@@ -52,6 +52,8 @@ void UDPSocket::bind(uint16_t port) {
         raise_errno("bind");
     }
 
+    current_port = port;
+
     // register reader
     reactor.setOnReadable(sock, [this]() {
         std::vector<char> buffer;
@@ -156,6 +158,8 @@ UDPSocket::~UDPSocket() {
 }
 
 void UDPSocket::rebind(uint16_t new_port) {
+    if (new_port == current_port)
+        return;
     unbind();
     bind(new_port);
 }

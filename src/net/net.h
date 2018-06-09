@@ -55,7 +55,7 @@ public:
 
     bool operator<(const SockAddr& o) const {
         if (port() != o.port())
-            return port() != o.port();
+            return port() < o.port();
         return ip().to_string() < o.ip().to_string();
     }
 };

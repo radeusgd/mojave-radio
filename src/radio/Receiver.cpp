@@ -80,7 +80,7 @@ void Receiver::moveMenuChoice(std::function<Stations::iterator(const Stations&, 
     }
 }
 
-void Receiver::changeCurrentStation(Receiver::Station new_station) {
+void Receiver::changeCurrentStation(Station new_station) {
     if (current_station) {
         stopListening(*current_station);
     }
@@ -142,8 +142,10 @@ void Receiver::stationListHasChanged() {
     if (!default_station_name.empty()) { // if default station name is set
         if (current_station
             && current_station->name == default_station_name
-            && stations.find(*current_station) != stations.end())
+            && stations.find(*current_station) != stations.end()) {
             return refreshMenu(); // we are already listening to default and it is alive
+        }
+
 
         // otherwise check if default is available and start listening
         for (const auto& s : stations) {

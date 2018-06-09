@@ -106,7 +106,9 @@ void Transmitter::prepareStdin() {
 
         if (in_buffer == psize) {
             processPackage(std::move(stdin_buff)); // move contents
-            stdin_buff.resize(psize); // bring buffer back to useful state
+            // bring buffer back to useful state
+            stdin_buff.clear();
+            stdin_buff.resize(psize);
             in_buffer = 0;
         }
     });

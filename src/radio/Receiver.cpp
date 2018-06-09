@@ -75,12 +75,18 @@ void Receiver::moveMenuChoice(std::function<Stations::iterator(const Stations&, 
 
         auto new_station = mod(stations, it)->first;
         if (new_station != *current_station) {
-            stopListening(*current_station);
-            current_station = new_station;
-            startListening(new_station);
-            refreshMenu();
+            changeCurrentStation(new_station);
         }
     }
+}
+
+void Receiver::changeCurrentStation(Receiver::Station new_station) {
+    if (current_station) {
+        stopListening(*current_station);
+    }
+    current_station = new_station;
+    startListening(new_station);
+    refreshMenu();
 }
 
 void Receiver::prepareMenu() {
@@ -128,7 +134,27 @@ void Receiver::handleReplyFrom(Receiver::Station station) {
 }
 
 void Receiver::stationListHasChanged() {
-    // TODO default_station semantics - what are they?
+    /*
+     * In response to https://szkopul.edu.pl/c/sik2017l/questions/2521/
+     * I decided that if the default station is specified it is selected whenever it becomes available.
+     * This makes the menu unusable when this station is present, but if someone wanted a default station, that makes sense to me.
+     */
+    if (!default_station_name.empty()) { // if default station name is set
+        if (current_station
+            && current_station->name == default_station_name
+            && stations.find(*current_station) != stations.end())
+            return refreshMenu(); // we are already listening to default and it is alive
+
+        // otherwise check if default is available and start listening
+        for (const auto& s : stations) {
+            if (s.first.name == default_station_name) {
+                dbg << "Switching to default station.\n";
+                changeCurrentStation(s.first);
+                return;
+            }
+        }
+    }
+
     if (current_station) {
         // if we are already playing something, check if it's still alive
         if (stations.find(*current_station) == stations.end()) {
@@ -156,7 +182,7 @@ void Receiver::refreshMenu() {
     ss << bar << "\n";
     ss << "  SIK Radio\n";
     ss << bar << "\n";
-    for (auto s : stations) {
+    for (const auto &s : stations) {
         if (current_station && *current_station == s.first) {
             ss << "  > ";
         } else {

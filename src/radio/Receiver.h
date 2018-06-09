@@ -80,6 +80,7 @@ private:
 
     void moveMenuChoice(std::function<Stations::iterator(const Stations&, Stations::iterator)> mod);
     void stationListHasChanged();
+    void changeCurrentStation(Station new_station);
     void refreshMenu();
 
     void startListening(Station station);

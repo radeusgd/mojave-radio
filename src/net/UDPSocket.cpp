@@ -38,11 +38,6 @@ void UDPSocket::bind(uint16_t port) {
         raise_errno("setsockopt broadcast");
     }
 
-    optval = 1; // TODO this is mostly for testing, dunno
-    if (setsockopt(sock, SOL_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
-        raise_errno("setsockopt loop");
-    }
-
     optval = 1;
     if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
         raise_errno("setsockopt reuseaddr");

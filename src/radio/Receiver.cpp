@@ -118,7 +118,8 @@ void Receiver::handleReplyFrom(Receiver::Station station) {
         auto it = stations.find(station);
         if (it == stations.end()) return; // station already removed
 
-        if (chrono::to_millis(chrono::now() - it->second) >= DISCOVER_TIMEOUT - 1) { // TODO maybe that -1 is not needed?
+        // I'm checking for DISCOVER_TIMEOUT - 1, because of rounding issues (runAfter implementation has +-1ms precision)
+        if (chrono::to_millis(chrono::now() - it->second) >= DISCOVER_TIMEOUT - 1) {
             dbg << "Station " << it->first.name << " signal lost.\n";
             stations.erase(it);
             stationListHasChanged();

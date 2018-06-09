@@ -54,7 +54,7 @@ void TelnetServer::setWindowContents(std::string contents) {
     contents = CLEAR_SCREEN + MOVE_HOME + std::regex_replace(contents, std::regex("\n"), "\n\r");
     current_contents = {contents.begin(), contents.end()};
     for (auto c : clients) {
-        send(c.second.sock, current_contents); // TODO transient
+        send(c.second.sock, current_contents);
     }
 }
 
@@ -66,7 +66,7 @@ void TelnetServer::clientConnected(int c_sock) {
 
     reactor.setOnReadable(c_sock, [this, c_sock]() {
         BytesBuffer buff;
-        buff.resize(100); // TODO
+        buff.resize(1024);
         ssize_t r = recv(c_sock, &buff[0], buff.size(), MSG_DONTWAIT);
         if (r < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN)
@@ -85,7 +85,7 @@ void TelnetServer::clientConnected(int c_sock) {
         }
     });
 
-    sendOption(c_sock, OP_DONT, OPT_LINEMODE); // TODO is it needed?
+    sendOption(c_sock, OP_DONT, OPT_LINEMODE);
     sendOption(c_sock, OP_WILL, OPT_ECHO);
     sendOption(c_sock, OP_WILL, OPT_SUPPRESS_GO_AHEAD);
     send(c_sock, current_contents);

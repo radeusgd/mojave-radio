@@ -32,7 +32,10 @@ add_executable(odbiornik
 add_executable(nadajnik
         ${SOURCES} src/radio/nadajnik_main.cpp)
 
-set(LIBRARIES boost_program_options)
+set(Boost_USE_STATIC_LIBS   ON)
+find_package(Boost REQUIRED program_options)
+
+set(LIBRARIES ${Boost_LIBRARIES})
 
 TARGET_LINK_LIBRARIES(odbiornik ${LIBRARIES})
 TARGET_LINK_LIBRARIES(nadajnik ${LIBRARIES})

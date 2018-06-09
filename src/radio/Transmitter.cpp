@@ -36,7 +36,6 @@ Transmitter::Transmitter(Reactor &reactor,
     time_t now = time(NULL);
     session_id = static_cast<uint64_t>(now);
 
-    //ctrl_sock.registerToMulticastGroup(multicast_addr); // TODO maybe no need to register to mcast?
     prepareControl();
     prepareStdin();
     prepareRetransmissions(rtime);
@@ -98,7 +97,8 @@ void Transmitter::prepareStdin() {
             // we reached end of file - stop
             dbg << "stdin - EOF\n";
             reactor.cancelReading(0);
-            reactor.stop(); // TODO right now?
+            // I stop the whole program immediately at EOF
+            reactor.stop();
             return;
         }
 

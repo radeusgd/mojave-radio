@@ -38,9 +38,6 @@ void UDPSocket::bind(uint16_t port) {
         raise_errno("setsockopt broadcast");
     }
 
-    // TODO
-    //optval = DEFAULT_TTL;
-    //setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &optval, sizeof(optval))
     optval = 1; // TODO this is mostly for testing, dunno
     if (setsockopt(sock, SOL_IP, IP_MULTICAST_LOOP, &optval, sizeof(optval)) < 0) {
         raise_errno("setsockopt loop");
@@ -66,9 +63,9 @@ void UDPSocket::bind(uint16_t port) {
 
         buffer.resize(BUFFSIZE);
         SockAddr src_addr;
-        socklen_t len = sizeof(src_addr);
+        socklen_t len = sizeof(src_addr.underlying);
         ssize_t r = recvfrom(sock, &buffer[0], BUFFSIZE, MSG_DONTWAIT,
-                             reinterpret_cast<sockaddr *>(&src_addr), &len);
+                             reinterpret_cast<sockaddr *>(&src_addr.underlying), &len);
         if (r < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN)
                 return;
@@ -92,14 +89,14 @@ void UDPSocket::registerWriter() {
         assert (!send_queue.empty());
         PendingMessage &pm = send_queue.front();
         ssize_t r = sendto(sock, &pm.data[0], pm.data.size(),
-                        0, reinterpret_cast<const sockaddr *>(&pm.destination),
-                        sizeof(pm.destination));
+                        0, reinterpret_cast<const sockaddr *>(&pm.destination.underlying),
+                        sizeof(pm.destination.underlying));
         if (r == 0)
             return;
         if (r < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 return;
-            raise_errno("write"); // TODO? EAGAIN?
+            raise_errno("write");
         }
 
         if (static_cast<size_t >(r) != pm.data.size()) {
@@ -164,7 +161,6 @@ UDPSocket::~UDPSocket() {
 }
 
 void UDPSocket::rebind(uint16_t new_port) {
-    // TODO check if not the same as old port, maybe no need to do this
     unbind();
     bind(new_port);
 }

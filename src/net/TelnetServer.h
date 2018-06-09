@@ -35,7 +35,11 @@ private:
     int sock;
     struct Client {
         int sock;
-        std::deque<BytesBuffer> queue; // TODO transient messages
+        // I also wanted to implement 'transient' messages,
+        // so that if there are 2 menu updates waiting to be sent,
+        // only the second one gets sent because it invaldiates the previous one anyway
+        // but didn't have the time to fully test that, so abandoned it
+        std::deque<BytesBuffer> queue;
         size_t current_bytes_sent = 0;
         enum class IncomingDataMode {
             NORMAL,

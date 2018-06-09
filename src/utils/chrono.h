@@ -13,7 +13,7 @@ namespace chrono {
 
     inline int to_millis(duration d) {
         auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(d);
-        return static_cast<int>(diff.count()); // TODO
+        return static_cast<int>(diff.count());
     }
 
     inline point now() {

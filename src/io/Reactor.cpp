@@ -82,7 +82,7 @@ void Reactor::run() {
         }
 
         if (polls.empty()) {
-            // TODO waiting for timers?
+            // we could still wait for time-based events here
             return;
         }
 

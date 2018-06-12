@@ -43,6 +43,11 @@ void UDPSocket::bind(uint16_t port) {
         raise_errno("setsockopt reuseaddr");
     }
 
+    optval = 4;
+    if (setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &optval, sizeof(optval)) < 0) {
+        raise_errno("setsockopt ttl");
+    }
+
     // bind
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
